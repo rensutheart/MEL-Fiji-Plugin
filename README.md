@@ -2,7 +2,7 @@
 This is an implementation of the Mitochondrial Event Localiser as a plugin for Fiji/ImageJ.
 
 ## Installation
-Copy the `MEL_Fiji_Plugin.jar` into the the `plugins` folder of where you extracted Fiji. (e.g. C:\&lt;path-to-Fiji&gt;\Fiji.app\plugins\MEL_Fiji_Plugin.jar)
+Copy the `MEL_Fiji_Plugin.jar` into the the `plugins` folder of where you extracted Fiji. (e.g. C:\ &lt;path-to-Fiji&gt;\Fiji.app\plugins\MEL_Fiji_Plugin.jar)
 
 ## Usage
 This plugin is still under development, and is not quite usable yet without some tweaking to the code. We hope to have a working version ready by July 2021.
