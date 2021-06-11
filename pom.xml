@@ -116,10 +116,11 @@
 		<!-- dependency> <groupId>sc.fiji</groupId> <artifactId>fiji</artifactId> 
 			<optional>true</optional> </dependency -->
 		<dependency>
-			<groupId>com.github.mcib3d</groupId>
+			<groupId>org.framagit.mcib3d</groupId>
 			<artifactId>mcib3d-core</artifactId>
 			<version>3.96.3</version>
 		</dependency>
+		
 		<dependency>
 			<groupId>org.jgrapht</groupId>
 			<artifactId>jgrapht-core</artifactId>
