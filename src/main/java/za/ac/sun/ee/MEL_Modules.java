@@ -756,8 +756,10 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			GraphNode backupExistingNode = null;
 			GraphNode backupNewGraphNode = null;
 			
+			// These two are related to the SAME LOCATION, but DIFFERENT Frame 1 labels, allows to "swop out" options
 			GraphNode backupExistingNodeShouldOverwrite = null;
 			GraphNode backupNewGraphNodeShouldOverwrite = null;
+			// this map stores the shortest distance for each associated Frame 1 label
 			Map<Integer, Float> existingMatchedMinDistance = new HashMap<Integer, Float>();
 			
 			// add matched node if close enough
@@ -782,6 +784,9 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 					}
 				}				
 				System.out.println("Calculated closest distanceBetweenNodes = " + distanceBetweenNodes);
+				
+				// If it should be added, this is the new graph node that will be added to the Matched Graph
+				GraphNode newFrame2GraphNode = new GraphNode(nodeVoxel_F2.getVector3D(), labelNum_F1, (int) nodeVoxel_F2.value, distanceBetweenNodes);
 
 				boolean shouldAdd = true; // add by default
 				// check if it already exists in the graph for another Frame 1 label
@@ -793,10 +798,11 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 					shouldAdd = false;
 					// if there was a closest node && (new distance is less than existing distance || existingNode in Frame 2 has no related structure in Frame 1)
 					if (distanceBetweenNodes != -1 && (distanceBetweenNodes < existingNode.distanceToRelated || existingNode.distanceToRelated == -1)) {
-						// START HERE: This if statement prevents certain existing labels to be completely removed since some other label is always closer
-						// if, however, it has been detected before, and the detected distance was smaller, now you may happily replace it
-						if(existingMatchedMinDistance.containsKey(existingNode.relatedLabelInOtherFrame) && 
-								existingMatchedMinDistance.get(existingNode.relatedLabelInOtherFrame) < existingNode.distanceToRelated)
+						// This if statement prevents certain existing labels to be completely removed since some other label is always closer
+						// if, however, it has been detected before in some other location and that detected distance was smaller, now you may happily 
+						// replace it in this location	
+						float existingMinDistance = existingMatchedMinDistance.get(existingNode.relatedLabelInOtherFrame);
+						if(existingMatchedMinDistance.containsKey(existingNode.relatedLabelInOtherFrame) && existingMinDistance < existingNode.distanceToRelated)
 						{
 							System.out.println("REPLACED: " + existingNode);
 							matchedGraphs_onF2.removeVertex(existingNode);
@@ -804,26 +810,31 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 						}
 						// if it has already been detected before, and now the new distance is smaller, then this is the one you should keep, 
 						// replace the previous one, and also save this case, to for future
-						else if(existingMatchedMinDistance.containsKey(existingNode.relatedLabelInOtherFrame) && 
-								existingMatchedMinDistance.get(existingNode.relatedLabelInOtherFrame) >= existingNode.distanceToRelated)
+						else if(existingMatchedMinDistance.containsKey(existingNode.relatedLabelInOtherFrame) && existingMinDistance >= existingNode.distanceToRelated)
 						{
+							// remove old location and label from graph (this is not the same location as the currently processed newFrame2GraphNode)
 							System.out.println("REPLACED: " + backupExistingNodeShouldOverwrite);
 							matchedGraphs_onF2.removeVertex(backupExistingNodeShouldOverwrite);
 							
+							// replace that old location vertex with a new label
 							matchedGraphs_onF2.addVertex(backupNewGraphNodeShouldOverwrite);
 							System.out.println("ADDED: " + backupNewGraphNodeShouldOverwrite);
 							associatedNodePairsMatched++;
 							
+							// store the currently considered graph nodes, in case a similar replacement must be done in future
 							backupExistingNodeShouldOverwrite = existingNode;
-							backupNewGraphNodeShouldOverwrite = new GraphNode(nodeVoxel_F2.getVector3D(), labelNum_F1, (int) nodeVoxel_F2.value, distanceBetweenNodes);
+							backupNewGraphNodeShouldOverwrite = newFrame2GraphNode;
 						}
-						// in the default case never replace the first time if an existing label is detected
+						// in the default case, where existingMatchedMinDistance doesn't have the Frame 1 label yet, never replace the first time if an existing 
+						// label is detected, since that might be the only place that label is stored.
+						// TODO: Store how many graph labels are associated with each label, and then I could possibly overwrite immediately
 						else
 						{
 							existingMatchedMinDistance.put(existingNode.relatedLabelInOtherFrame,  existingNode.distanceToRelated);
 							
+							// store backup in case they need to be replaced in future
 							backupExistingNodeShouldOverwrite = existingNode;
-							backupNewGraphNodeShouldOverwrite = new GraphNode(nodeVoxel_F2.getVector3D(), labelNum_F1, (int) nodeVoxel_F2.value, distanceBetweenNodes);
+							backupNewGraphNodeShouldOverwrite = newFrame2GraphNode;
 							
 						}
 					} 
@@ -832,15 +843,19 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //								 + distanceBetweenNodes + " since existing is closer " +existingNode);
 //					}
 				}
+				else { // No existing node, therefore NEW node, always add
+					shouldAdd = true;
+				}
 
 				if (shouldAdd) {
-					GraphNode newGraphNode = new GraphNode(nodeVoxel_F2.getVector3D(), labelNum_F1, (int) nodeVoxel_F2.value, distanceBetweenNodes);
-					matchedGraphs_onF2.addVertex(newGraphNode);
-					System.out.println("ADDED: " + newGraphNode);
+					matchedGraphs_onF2.addVertex(newFrame2GraphNode);
+					System.out.println("ADDED: " + newFrame2GraphNode);
 					associatedNodePairsMatched++;
 				}
 
 			}
+			
+			
 
 			// if there were associatedLabels but now there are none due to distance
 			// threshold removing them then mark this in some way to respond appropriately
