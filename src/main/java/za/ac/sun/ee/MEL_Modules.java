@@ -63,16 +63,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * This example illustrates how to create an ImageJ {@link Command} plugin.
- * <p>
- * The code here is a simple Gaussian blur using ImageJ Ops.
- * </p>
- * <p>
- * You should replace the parameter fields with your own inputs and outputs, and
- * replace the {@link run} method implementation with your own logic.
- * </p>
- */
 @Plugin(type = Command.class, menuPath = "Plugins>MEL Process")
 public class MEL_Modules<T extends RealType<T>> implements Command {
 	//
@@ -89,7 +79,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 	private OpService opService;
 
 	@Parameter
-	private int minStructureVolume = 20; // TODO: This can be dependent on Voxel size (see Mitochondrial Analyzer macro)
+	private int minStructureVolume = 5; // TODO: This can be dependent on Voxel size (see Mitochondrial Analyzer macro)
 	
 	@Parameter
 	private float minOverlapPercentage = 0.1f;
@@ -485,8 +475,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //			labelsSkeletons.add(new Object3DVoxels());
 //		}
 
-		// Use the labeled image to ensure small structures are removed already
-		// (minStructureSize)
+		// Use the labeled image to ensure small structures are removed already in previous step (minStructureSize)
 		ImageByte binarizedLabel = labeledImage.thresholdAboveInclusive(1);
 		ImagePlus skeleton = binarizedLabel.getImagePlus();
 
@@ -507,12 +496,12 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //		IJ.run("Calculator Plus", "i1=Skeleton_Binary i2=Labeled_Image operation=[Multiply: i2 = (i1*i2) x k1 + k2] k1="+skeletonBinary.getMax()+" k2=0 create");
 //		IJ.selectWindow("Result");
 
-		// IMPLEMENTATION 2 (resonably fast)
+		// IMPLEMENTATION 2 (reasonably fast)
 		ImageInt labeledSkeletonImage = ImageInt.wrap(skeleton);
 		ImagePlus labeledSkeletonImagePlus = labeledSkeletonImage.multiplyImage(labeledImage, (float) (1.0f / labeledSkeletonImage.getMax())).getImagePlus();
 //		labeledSkeletonImagePlus.show(); 
 		// this is a 32 bit image, and as soon as I wrap it to int it becomes 16-bit,
-		// but then all the numbers change (rescales)...
+		// but then all the numbers change (rescales)... There might be a more elegant fix...(TODO)
 		labeledSkeletonImage = ImageInt.wrap(labeledSkeletonImagePlus);
 		labeledSkeletonImage.multiplyByValue((float) (labeledImage.getMax() + 1) / 65536.0f);
 		// labeledSkeletonImage.multiplyByValue((float)
@@ -525,7 +514,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 		// ensure that no structures were accidentally completely removed during
 		// skeletonization (which sometimes happens for small structures)
-		for (int i = 0; i < labelsSkeletons.size(); i++) {
+		for (int i = 0; i < (int)labeledImage.getMax(); i++) { // labelsSkeletons.size()
 			if (labelsSkeletons.get(i).getVoxels().size() == 0) {
 				Point3D centerPoint = new Object3DVoxels(labeledImage, (i + 1)).getCenterAsPoint();
 				centerPoint.x = Math.round(centerPoint.x);
@@ -759,8 +748,11 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			// These two are related to the SAME LOCATION, but DIFFERENT Frame 1 labels, allows to "swop out" options
 			GraphNode backupExistingNodeShouldOverwrite = null;
 			GraphNode backupNewGraphNodeShouldOverwrite = null;
+
 			// this map stores the shortest distance for each associated Frame 1 label
 			Map<Integer, Float> existingMatchedMinDistance = new HashMap<Integer, Float>();
+			// this map stores the number of graph nodes for each associated Frame 1 label
+			Map<Integer, Integer> numNodesPerF1Label = new HashMap<Integer, Integer>();
 			
 			// add matched node if close enough
 			for (Voxel3D nodeVoxel_F2 : tempAssociatedCompositeGraph.vertexSet()) {				
@@ -783,43 +775,49 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 						}
 					}
 				}				
-				System.out.println("Calculated closest distanceBetweenNodes = " + distanceBetweenNodes);
+				// System.out.println("Calculated closest distanceBetweenNodes = " + distanceBetweenNodes);
 				
 				// If it should be added, this is the new graph node that will be added to the Matched Graph
 				GraphNode newFrame2GraphNode = new GraphNode(nodeVoxel_F2.getVector3D(), labelNum_F1, (int) nodeVoxel_F2.value, distanceBetweenNodes);
 
 				boolean shouldAdd = true; // add by default
 				// check if it already exists in the graph for another Frame 1 label
-				GraphNode existingNode = findDuplicateGraphNode(matchedGraphs_onF2, nodeVoxel_F2.getVector3D());
+				GraphNode existingNode = backupExistingNode;
 				// if node already exist, but has a different label associated to it, but with a
 				// greater distance, then choose to use smaller distance, hence remove
 				if (existingNode != null) {
-					System.out.println("EXISTING " + existingNode);
+					// System.out.println("EXISTING " + existingNode);
 					shouldAdd = false;
 					// if there was a closest node && (new distance is less than existing distance || existingNode in Frame 2 has no related structure in Frame 1)
 					if (distanceBetweenNodes != -1 && (distanceBetweenNodes < existingNode.distanceToRelated || existingNode.distanceToRelated == -1)) {
 						// This if statement prevents certain existing labels to be completely removed since some other label is always closer
 						// if, however, it has been detected before in some other location and that detected distance was smaller, now you may happily 
 						// replace it in this location	
-						float existingMinDistance = existingMatchedMinDistance.get(existingNode.relatedLabelInOtherFrame);
+						float existingMinDistance = existingMatchedMinDistance.containsKey(existingNode.relatedLabelInOtherFrame) ? existingMatchedMinDistance.get(existingNode.relatedLabelInOtherFrame) : Float.POSITIVE_INFINITY;
 						if(existingMatchedMinDistance.containsKey(existingNode.relatedLabelInOtherFrame) && existingMinDistance < existingNode.distanceToRelated)
 						{
+							// remove existing node in same location
 							System.out.println("REPLACED: " + existingNode);
 							matchedGraphs_onF2.removeVertex(existingNode);
 							shouldAdd = true;
 						}
-						// if it has already been detected before, and now the new distance is smaller, then this is the one you should keep, 
+						// if, however, it has already been detected before, and now the new distance is smaller, then this is the one you should keep, 
 						// replace the previous one, and also save this case, to for future
 						else if(existingMatchedMinDistance.containsKey(existingNode.relatedLabelInOtherFrame) && existingMinDistance >= existingNode.distanceToRelated)
 						{
+							System.out.println("EXISTING " + existingNode);
+							
 							// remove old location and label from graph (this is not the same location as the currently processed newFrame2GraphNode)
-							System.out.println("REPLACED: " + backupExistingNodeShouldOverwrite);
+							System.out.println("  was REPLACED: " + backupExistingNodeShouldOverwrite);
 							matchedGraphs_onF2.removeVertex(backupExistingNodeShouldOverwrite);
 							
 							// replace that old location vertex with a new label
 							matchedGraphs_onF2.addVertex(backupNewGraphNodeShouldOverwrite);
-							System.out.println("ADDED: " + backupNewGraphNodeShouldOverwrite);
-							associatedNodePairsMatched++;
+							System.out.println("    ...WITH: " + backupNewGraphNodeShouldOverwrite);
+							associatedNodePairsMatched++;					
+							
+							// replace to store the new minimum distance
+							existingMatchedMinDistance.replace(existingNode.relatedLabelInOtherFrame, existingNode.distanceToRelated);
 							
 							// store the currently considered graph nodes, in case a similar replacement must be done in future
 							backupExistingNodeShouldOverwrite = existingNode;
@@ -827,7 +825,6 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 						}
 						// in the default case, where existingMatchedMinDistance doesn't have the Frame 1 label yet, never replace the first time if an existing 
 						// label is detected, since that might be the only place that label is stored.
-						// TODO: Store how many graph labels are associated with each label, and then I could possibly overwrite immediately
 						else
 						{
 							existingMatchedMinDistance.put(existingNode.relatedLabelInOtherFrame,  existingNode.distanceToRelated);
@@ -847,12 +844,29 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 					shouldAdd = true;
 				}
 
-				if (shouldAdd) {
+				if (shouldAdd) {						
 					matchedGraphs_onF2.addVertex(newFrame2GraphNode);
-					System.out.println("ADDED: " + newFrame2GraphNode);
+					// System.out.println("ADDED: " + newFrame2GraphNode);
 					associatedNodePairsMatched++;
+					
+					// if label already exists, then increment count
+					if(numNodesPerF1Label.containsKey(newFrame2GraphNode.relatedLabelInOtherFrame))
+					{
+						numNodesPerF1Label.replace(newFrame2GraphNode.relatedLabelInOtherFrame, numNodesPerF1Label.get(newFrame2GraphNode.relatedLabelInOtherFrame) + 1) ;
+					}
+					else // else create a new one and set count to 1
+					{
+						numNodesPerF1Label.put(newFrame2GraphNode.relatedLabelInOtherFrame, 1);	
+					}
 				}
 
+			}
+			
+			// if the newGraphNode was never added due to existing waiting to check for duplicate, then add it now
+			if(backupNewGraphNodeShouldOverwrite != null && findDuplicateGraphNode(matchedGraphs_onF2, backupNewGraphNodeShouldOverwrite) != null)
+			{
+				matchedGraphs_onF2.addVertex(backupNewGraphNodeShouldOverwrite);
+				System.out.println("\tADDED last New Graph node, since never added: " + backupNewGraphNode);
 			}
 			
 			
@@ -872,7 +886,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				
 			}
 		}
-
+		
+		
 		//// DEBUG: Find all potential duplicates which were added (which shouldn't be
 		//// the case if the above code did its job)
 		for (GraphNode nodeA : matchedGraphs_onF2.vertexSet()) {
