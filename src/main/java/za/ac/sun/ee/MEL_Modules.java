@@ -87,6 +87,13 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 	@Parameter
 	private float skeletonDistanceThreshold = 20;
 
+	@Parameter
+	private float depolarisationRangeThreshold = 50;
+
+	@Parameter
+	private float depolarisationVolumeSimilarityThreshold = 0.2f; // this is a percentage: 0 means that they must be eactly the same, 0.2 means
+																	// that the other structure may be 20% larger or smaller
+
 	@Override
 	public void run() {
 		long startTime = System.currentTimeMillis();
@@ -134,8 +141,17 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// background, hence the index
 		// is off by 1 compared to the label image label number
 		int[][] overlappingVolumes = getOverlappingVolumes(labelVoxels_F1, labelVoxels_F2);
-		List<List<Integer>> associatedLabelsBetweenFrames_F1toF2 = getAssociatedLabelsBetweenFrames(overlappingVolumes);
-		List<List<Integer>> associatedLabelsBetweenFrames_F2toF1 = getAssociatedLabelsBetweenFrames(transposeMatrix(overlappingVolumes));
+
+		Point3D[] centerOfStructures_F1 = getCenterOfStructures(labelVoxels_F1);
+		Point3D[] centerOfStructures_F2 = getCenterOfStructures(labelVoxels_F2);
+
+		int[] numVoxelsInStructures_F1 = getNumVoxelsInStructures(labelVoxels_F1);
+		int[] numVoxelsInStructures_F2 = getNumVoxelsInStructures(labelVoxels_F2);
+
+		List<List<Integer>> associatedLabelsBetweenFrames_F1toF2 = getAssociatedLabelsBetweenFrames(overlappingVolumes, centerOfStructures_F1, numVoxelsInStructures_F1, centerOfStructures_F2,
+				numVoxelsInStructures_F2, depolarisationRangeThreshold, depolarisationVolumeSimilarityThreshold);
+		List<List<Integer>> associatedLabelsBetweenFrames_F2toF1 = getAssociatedLabelsBetweenFrames(transposeMatrix(overlappingVolumes), centerOfStructures_F2, numVoxelsInStructures_F2,
+				centerOfStructures_F1, numVoxelsInStructures_F1, depolarisationRangeThreshold, depolarisationVolumeSimilarityThreshold);
 
 		// I don't seem to need this anymore for the new approach
 //		List<List<Integer>> associatedLabelsWithinFrame_F1 = getAssociatedLabelsWithinFrame(associatedLabelsBetweenFrames_F1toF2, associatedLabelsBetweenFrames_F2toF1);
@@ -212,7 +228,11 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		 * DETECT DEPOLARISATION
 		 */
 		System.out.println("\nFIND DEPOLARISATION");
-		List<Vector3D> depolarisationEventLocations = findDepolarisationEvents(reducedAssociatedLabelsBetweenFrames_F1toF2, labels_F1);
+		// NOTE: I'm NOT using the reducedAssociatedLabelsBetweenFrames_F1toF2 list
+		// here, since for depolarisation I would err on the side of caution, and if
+		// there is a slight possibility that the even did join to another structure or
+		// moved, then I don't want to mark it
+		List<Vector3D> depolarisationEventLocations = findDepolarisationEvents(associatedLabelsBetweenFrames_F1toF2, labelVoxels_F1);
 		ImageInt depolarisationEventsImage = eventsToImage(depolarisationEventLocations, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, "Depolarisation events");
 
 		/*
@@ -302,6 +322,26 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		return overlappingVolumes;
 	}
 
+	public Point3D[] getCenterOfStructures(Object3DVoxels[] labelVoxels) {
+		Point3D[] centerOfStructures = new Point3D[labelVoxels.length];
+
+		for (int i = 0; i < centerOfStructures.length; i++) {
+			centerOfStructures[i] = labelVoxels[i].getCenterAsPoint();
+		}
+
+		return centerOfStructures;
+	}
+
+	public int[] getNumVoxelsInStructures(Object3DVoxels[] labelVoxels) {
+		int[] numVoxelsInStructure = new int[labelVoxels.length];
+
+		for (int i = 0; i < numVoxelsInStructure.length; i++) {
+			numVoxelsInStructure[i] = labelVoxels[i].getVoxels().size();
+		}
+
+		return numVoxelsInStructure;
+	}
+
 	// The startLabel is primarily used for removing background (therefore
 	// startLabel = 1)
 	public Object3DVoxels[] labelImageTo3DVoxelArray(ImageInt labeledImage, int startLabel) {
@@ -319,7 +359,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		return labelImageTo3DVoxelArray(labeledImage, 0);
 	}
 
-	public List<List<Integer>> getAssociatedLabelsBetweenFrames(int[][] overlappingVolumes) {
+	public List<List<Integer>> getAssociatedLabelsBetweenFrames(int[][] overlappingVolumes, Point3D[] centerOfStructures_F1, int[] numVoxelsInStructures_F1, Point3D[] centerOfStructures_F2,
+			int[] numVoxelsInStructures_F2, float depolarisationRange, float depolarisationVolumeSimilarity) {
 		long startTime = System.currentTimeMillis();
 
 		List<List<Integer>> associatedLabelsBetweenFrames = new ArrayList<List<Integer>>(overlappingVolumes.length);
@@ -335,6 +376,51 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 					System.out.println("Associated between " + (i + 1) + " and " + (j + 1));
 				}
 			}
+
+			/*
+			 * This section tries to find "Close" structures of similar volume, before
+			 * allowing something to be considered as depolarisation
+			 */
+			// there were no associated labels (depolarized? from Frame 1 to Frame 2, or
+			// appeared from Frame 1 to Frame 2 when this function is called with the
+			// transpose)
+			if (tempList.size() == 0) {
+				Point3D centerCurrent = centerOfStructures_F1[i];
+				int numVoxelsCurrent = numVoxelsInStructures_F1[i];
+
+				double minDistance = Float.POSITIVE_INFINITY;
+				double minVoxelRange = Float.POSITIVE_INFINITY;
+				int F2_index = Integer.MAX_VALUE;
+
+				// loop through the structures in the other frame and try to find the closest
+				// structure close to the current center that is also similar volume
+				for (int j = 0; j < centerOfStructures_F2.length; j++) {
+					double newDistance = centerCurrent.distance(centerOfStructures_F2[j]);
+					if (newDistance < depolarisationRange) {
+						double newVoxelRange = Math.abs(numVoxelsCurrent / numVoxelsInStructures_F2[j] - 1);
+						// check if they are of similar volume, could be larger or smaller, looking for
+						// percentage difference
+						if (newVoxelRange < depolarisationVolumeSimilarity) {
+							// Prioritise the distance, if closer, and still within the voxel num range,
+							// then set as new one.
+							if (newDistance <= minDistance) { // && newVoxelRange < minVoxelRange
+								System.out.println("NOT DEPOLARISATION. Link between " + (i + 1) + " and " + (j + 1) + " with distance " + newDistance + " and voxel similarity " + newVoxelRange);
+								minDistance = newDistance;
+								minVoxelRange = newVoxelRange;
+								F2_index = j;
+							}
+						}
+					}
+				}
+
+				// Only add, if a match could be found
+				if (F2_index != Integer.MAX_VALUE) {
+					tempList.add(F2_index);
+
+					System.out.println("... SAVED Associated between " + (i + 1) + " and " + (F2_index + 1));
+				}
+			}
+
 			associatedLabelsBetweenFrames.add(tempList);
 		}
 
@@ -885,16 +971,25 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			// if there were associatedLabels but now there are none due to distance
 			// threshold removing them then mark this in some way to respond appropriately
 			// to "early remove" potential events.
+			// TODO: Check this "backup add" code if it still makes sense
 			if (associatedNodePairsMatched == 0) {
 				// TODO: This label has no associated fusion/fission event,
-				// and therefore might depolarise or nothing
+				// and therefore might depolarise or nothing (but remember, this is only due to distance threshold)
 				System.out.println("\tERROR NO MATCHING for Label F1 " + (labelNum_F1 + 1));
 
-				matchedGraphs_onF2.removeVertex(backupExistingNode);
-				matchedGraphs_onF2.addVertex(backupNewGraphNode);
-				System.out.println("\t\tADDED BACKUP: " + backupNewGraphNode);
-				associatedNodePairsMatched = 1;
-
+				if (backupExistingNode != null)
+					matchedGraphs_onF2.removeVertex(backupExistingNode);
+				
+				if(backupNewGraphNode != null)
+				{
+					matchedGraphs_onF2.addVertex(backupNewGraphNode);
+					System.out.println("\t...ADDED BACKUP: " + backupNewGraphNode);
+					associatedNodePairsMatched = 1;
+				}
+				else
+				{
+					System.out.println("\t... THERE WAS NO BACKUP TO ADD");
+				}
 			}
 		}
 
@@ -905,14 +1000,12 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			for (GraphNode nodeB : matchedGraphs_onF2.vertexSet()) {
 				if (nodeA.sameLocation(nodeB) && (nodeA.distanceToRelated == -1 || nodeB.distanceToRelated == -1) && (nodeA.distanceToRelated != nodeB.distanceToRelated)) {
 					System.out.println("MATCHED " + nodeA + " and " + nodeB);
-					if(nodeA.distanceToRelated == -1)
-					{
+					if (nodeA.distanceToRelated == -1) {
 						System.out.println("   ...therefore REMOVED " + nodeA);
 						nodesToRemove.add(nodeA);
 					}
-					
-					if(nodeB.distanceToRelated == -1)
-					{
+
+					if (nodeB.distanceToRelated == -1) {
 						System.out.println("   ...therefore REMOVED " + nodeB);
 						nodesToRemove.add(nodeB);
 					}
@@ -920,8 +1013,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			}
 		}
 		// remove all the ones that were picked up to be removed
-		for(GraphNode removeNode: nodesToRemove)
-		{
+		for (GraphNode removeNode : nodesToRemove) {
 			matchedGraphs_onF2.removeVertex(removeNode);
 		}
 		////
@@ -1000,7 +1092,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 	}
 
-	// run along the graph until I find a transition between two labels and that is presumably the event location.
+	// run along the graph until I find a transition between two labels and that is
+	// presumably the event location.
 	public List<Vector3D> findEvents(Graph<GraphNode, DefaultEdge> inputGraph, List<Graph<Vector3D, DefaultEdge>> labelsSkeletonGraphs, boolean removeDuplicates, float duplicateDistance) {
 		long startTime = System.currentTimeMillis();
 
@@ -1021,7 +1114,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 						if (!eventList.contains(eventLocation)) {
 							eventList.add(eventLocation);
-							System.out.println("EVENT LOCATION " + eventLocation + " label 1 " + (node1.relatedLabelInOtherFrame+1) + " label 2 " + (node2.relatedLabelInOtherFrame+1) + " with diff " + diff.toString());
+							System.out.println("EVENT LOCATION " + eventLocation + " label 1 " + (node1.relatedLabelInOtherFrame + 1) + " label 2 " + (node2.relatedLabelInOtherFrame + 1)
+									+ " with diff " + diff.toString());
 						}
 					}
 				}
@@ -1111,14 +1205,16 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		return halfwayPoint;
 	}
 
-	public List<Vector3D> findDepolarisationEvents(List<List<Integer>> associatedLabelsBetweenFrames, ImageInt labeledImage) {
+	public List<Vector3D> findDepolarisationEvents(List<List<Integer>> associatedLabelsBetweenFrames, Object3DVoxels[] labeledVoxels) {
 		long startTime = System.currentTimeMillis();
 
 		List<Vector3D> eventList = new ArrayList<Vector3D>();
 
 		for (int i = 0; i < associatedLabelsBetweenFrames.size(); ++i) {
 			if (associatedLabelsBetweenFrames.get(i).size() == 0) {
-				Point3D centerPoint = new Object3DVoxels(labeledImage, (i + 1)).getCenterAsPoint();
+				System.out.println("Depolaristaion detected at label " + (i + 1));
+
+				Point3D centerPoint = labeledVoxels[i].getCenterAsPoint();
 				centerPoint.x = Math.round(centerPoint.x);
 				centerPoint.y = Math.round(centerPoint.y);
 				centerPoint.z = Math.round(centerPoint.z);
