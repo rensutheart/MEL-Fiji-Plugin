@@ -790,7 +790,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				// Matched Graph
 				GraphNode newFrame2GraphNode = new GraphNode(nodeVoxel_F2.getVector3D(), labelNum_F1, (int) nodeVoxel_F2.value, distanceBetweenNodes);
 
-				boolean shouldAdd = true; // add by default
+				boolean shouldAdd = false; // don't add by default
 				// check if it already exists in the graph for another Frame 1 label
 				GraphNode existingNode = backupExistingNode;
 				// if node already exist, but has a different label associated to it, but with a
@@ -855,7 +855,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //						 System.out.println("WON'T ADD label F1 " + (labelNum_F1 + 1) + " with distance " 
 //								 + distanceBetweenNodes + " since existing is closer " +existingNode);
 //					}
-				} else { // No existing node, therefore NEW node, always add
+				} else if (newFrame2GraphNode.distanceToRelated != -1) { // No existing node, therefore NEW node, always add
 					shouldAdd = true;
 				}
 
