@@ -900,12 +900,29 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 		//// DEBUG: Find all potential duplicates which were added (which shouldn't be
 		//// the case if the above code did its job)
+		List<GraphNode> nodesToRemove = new ArrayList<GraphNode>();
 		for (GraphNode nodeA : matchedGraphs_onF2.vertexSet()) {
 			for (GraphNode nodeB : matchedGraphs_onF2.vertexSet()) {
-				if (nodeA.sameLocation(nodeB) && (nodeA.distanceToRelated == -1 || nodeB.distanceToRelated == -1) && nodeA.distanceToRelated != nodeB.distanceToRelated) {
+				if (nodeA.sameLocation(nodeB) && (nodeA.distanceToRelated == -1 || nodeB.distanceToRelated == -1) && (nodeA.distanceToRelated != nodeB.distanceToRelated)) {
 					System.out.println("MATCHED " + nodeA + " and " + nodeB);
+					if(nodeA.distanceToRelated == -1)
+					{
+						System.out.println("   ...therefore REMOVED " + nodeA);
+						nodesToRemove.add(nodeA);
+					}
+					
+					if(nodeB.distanceToRelated == -1)
+					{
+						System.out.println("   ...therefore REMOVED " + nodeB);
+						nodesToRemove.add(nodeB);
+					}
 				}
 			}
+		}
+		// remove all the ones that were picked up to be removed
+		for(GraphNode removeNode: nodesToRemove)
+		{
+			matchedGraphs_onF2.removeVertex(removeNode);
 		}
 		////
 //		
@@ -934,7 +951,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			for (GraphNode node2 : inputGraph.vertexSet()) {
 				Vector3D diff = new Vector3D(Math.abs(node1.location.x - node2.location.x), Math.abs(node1.location.y - node2.location.y), Math.abs(node1.location.z - node2.location.z));
 
-				if (diff.x <= 1 && diff.y <= 1 && diff.z <= 1) {
+				if (0 <= diff.x && diff.x <= 1 && 0 <= diff.y && diff.y <= 1 && 0 <= diff.z && diff.z <= 1) {
 					if (!inputGraph.containsEdge(node1, node2)) {
 						inputGraph.addEdge(node1, node2);
 						// System.out.println("ADDED EDGE: from " + node1 + " to " + node2);
@@ -983,8 +1000,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 	}
 
-	// run along the graph until I find a transition between two labels and that is
-	// presumably the event location.
+	// run along the graph until I find a transition between two labels and that is presumably the event location.
 	public List<Vector3D> findEvents(Graph<GraphNode, DefaultEdge> inputGraph, List<Graph<Vector3D, DefaultEdge>> labelsSkeletonGraphs, boolean removeDuplicates, float duplicateDistance) {
 		long startTime = System.currentTimeMillis();
 
@@ -998,66 +1014,14 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				Vector3D diff = new Vector3D(Math.abs(node1.location.x - node2.location.x), Math.abs(node1.location.y - node2.location.y), Math.abs(node1.location.z - node2.location.z));
 
 				// the two voxels are neighbouring
-				if (diff.x <= 1 && diff.y <= 1 && diff.z <= 1) {
+				if (0 <= diff.x && diff.x <= 1 && 0 <= diff.y && diff.y <= 1 && 0 <= diff.z && diff.z <= 1) {
 					// .. and not the same voxel, AND is at a transition point
 					if (node1.relatedLabelInOtherFrame != node2.relatedLabelInOtherFrame) {
-						// Vector3D eventLocation = getMinHalfwayPoint(node1.location,
-						// labelsSkeletonGraphs.get(node1.relatedLabelInOtherFrame), true); //
-						// (node1.location.add(node2.location).multiply(0.5));
 						Vector3D eventLocation = getHalfwayPoint(node1.location, node2.location, true);
 
 						if (!eventList.contains(eventLocation)) {
-							// check both conditions, since I don't know which one is duplicated...
-							// THIS IS WRONG, two structures can fuse simultaneously in two separate places
-							/*
-							 * if(alreadyMatched.containsKey(node1.relatedLabelInOtherFrame)) { Vector3D
-							 * storedVector = alreadyMatched.get(node1.relatedLabelInOtherFrame);
-							 * eventList.remove(storedVector); eventLocation =
-							 * eventLocation.add(storedVector).multiply(0.5); // take running average to
-							 * create new event location System.out.println("\t UPDATED EVENT LOCATION " +
-							 * (node1.relatedLabelInOtherFrame+1) + " to " + (node1.relatedLabelInThisFrame
-							 * +1));
-							 * 
-							 * } else if(alreadyMatched.containsKey(node2.relatedLabelInOtherFrame)) {
-							 * Vector3D storedVector = alreadyMatched.get(node2.relatedLabelInOtherFrame);
-							 * eventList.remove(storedVector); eventLocation =
-							 * eventLocation.add(storedVector).multiply(0.5); // take running average to
-							 * create new event location System.out.println("\t UPDATED EVENT LOCATION2 " +
-							 * (node2.relatedLabelInOtherFrame+1) + " to " + (node2.relatedLabelInThisFrame
-							 * +1));
-							 * 
-							 * }
-							 * 
-							 * alreadyMatched.put(node1.relatedLabelInOtherFrame, eventLocation);
-							 */
 							eventList.add(eventLocation);
-							System.out.println("EVENT LOCATION " + eventLocation);
-						}
-
-						// THIS SECTION IS REPEATED FOR THE ABOVE, but uses node 2's related label. I
-						// don't know which one is the appropriate one
-						// This methodology can clearly be refined...
-						eventLocation = getMinHalfwayPoint(node2.location, labelsSkeletonGraphs.get(node2.relatedLabelInOtherFrame), true); // (node1.location.add(node2.location).multiply(0.5));
-
-						if (!eventList.contains(eventLocation)) {
-							// check both conditions, since I don't know which one is duplicated...
-							if (alreadyMatched.containsKey(node1.relatedLabelInOtherFrame)) {
-								Vector3D storedVector = alreadyMatched.get(node1.relatedLabelInOtherFrame);
-								eventList.remove(storedVector);
-								eventLocation = eventLocation.add(storedVector).multiply(0.5); // take running average to create new event location
-								System.out.println("\t UPDATED EVENT LOCATION " + (node1.relatedLabelInOtherFrame + 1) + " to " + (node1.relatedLabelInThisFrame + 1));
-
-							} else if (alreadyMatched.containsKey(node2.relatedLabelInOtherFrame)) {
-								Vector3D storedVector = alreadyMatched.get(node2.relatedLabelInOtherFrame);
-								eventList.remove(storedVector);
-								eventLocation = eventLocation.add(storedVector).multiply(0.5); // take running average to create new event location
-								System.out.println("\t UPDATED EVENT LOCATION2 " + (node2.relatedLabelInOtherFrame + 1) + " to " + (node2.relatedLabelInThisFrame + 1));
-
-							}
-
-							alreadyMatched.put(node1.relatedLabelInOtherFrame, eventLocation);
-							eventList.add(eventLocation);
-							System.out.println("EVENT LOCATION " + eventLocation);
+							System.out.println("EVENT LOCATION " + eventLocation + " label 1 " + (node1.relatedLabelInOtherFrame+1) + " label 2 " + (node2.relatedLabelInOtherFrame+1) + " with diff " + diff.toString());
 						}
 					}
 				}
