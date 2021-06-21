@@ -91,8 +91,13 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 	private float depolarisationRangeThreshold = 50;
 
 	@Parameter
-	private float depolarisationVolumeSimilarityThreshold = 0.2f; // this is a percentage: 0 means that they must be eactly the same, 0.2 means
-																	// that the other structure may be 20% larger or smaller
+	private float depolarisationVolumeSimilarityThreshold = 0.2f; // this is a percentage: 0 means that they must be
+																	// eactly the same, 0.2 means
+																	// that the other structure may be 20% larger or
+																	// smaller
+
+	@Parameter
+	private boolean debugOutput = false;
 
 	@Override
 	public void run() {
@@ -148,33 +153,50 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		int[] numVoxelsInStructures_F1 = getNumVoxelsInStructures(labelVoxels_F1);
 		int[] numVoxelsInStructures_F2 = getNumVoxelsInStructures(labelVoxels_F2);
 
-		List<List<Integer>> associatedLabelsBetweenFrames_F1toF2 = getAssociatedLabelsBetweenFrames(overlappingVolumes, centerOfStructures_F1, numVoxelsInStructures_F1, centerOfStructures_F2,
-				numVoxelsInStructures_F2, depolarisationRangeThreshold, depolarisationVolumeSimilarityThreshold);
-		List<List<Integer>> associatedLabelsBetweenFrames_F2toF1 = getAssociatedLabelsBetweenFrames(transposeMatrix(overlappingVolumes), centerOfStructures_F2, numVoxelsInStructures_F2,
-				centerOfStructures_F1, numVoxelsInStructures_F1, depolarisationRangeThreshold, depolarisationVolumeSimilarityThreshold);
+		List<List<Integer>> associatedLabelsBetweenFrames_F1toF2 = getAssociatedLabelsBetweenFrames(overlappingVolumes,
+				centerOfStructures_F1, numVoxelsInStructures_F1, centerOfStructures_F2, numVoxelsInStructures_F2,
+				depolarisationRangeThreshold, depolarisationVolumeSimilarityThreshold);
+		List<List<Integer>> associatedLabelsBetweenFrames_F2toF1 = getAssociatedLabelsBetweenFrames(
+				transposeMatrix(overlappingVolumes), centerOfStructures_F2, numVoxelsInStructures_F2,
+				centerOfStructures_F1, numVoxelsInStructures_F1, depolarisationRangeThreshold,
+				depolarisationVolumeSimilarityThreshold);
 
 		// I don't seem to need this anymore for the new approach
 //		List<List<Integer>> associatedLabelsWithinFrame_F1 = getAssociatedLabelsWithinFrame(associatedLabelsBetweenFrames_F1toF2, associatedLabelsBetweenFrames_F2toF1);
 //		List<List<Integer>> associatedLabelsWithinFrame_F2 = getAssociatedLabelsWithinFrame(associatedLabelsBetweenFrames_F2toF1, associatedLabelsBetweenFrames_F1toF2);
 
-		List<List<Float>> percentageOverlap_F1toF2 = getRelativePercentageOverlap(overlappingVolumes, associatedLabelsBetweenFrames_F1toF2);
-		List<List<Float>> percentageOverlap_F2toF1 = getRelativePercentageOverlap(transposeMatrix(overlappingVolumes), associatedLabelsBetweenFrames_F2toF1);
+		List<List<Float>> percentageOverlap_F1toF2 = getRelativePercentageOverlap(overlappingVolumes,
+				associatedLabelsBetweenFrames_F1toF2);
+		List<List<Float>> percentageOverlap_F2toF1 = getRelativePercentageOverlap(transposeMatrix(overlappingVolumes),
+				associatedLabelsBetweenFrames_F2toF1);
 
-		List<List<Integer>> reducedAssociatedLabelsBetweenFrames_F1toF2 = reduceAssociateLabels(associatedLabelsBetweenFrames_F1toF2, percentageOverlap_F1toF2, minOverlapPercentage);
-		List<List<Integer>> reducedAssociatedLabelsBetweenFrames_F2toF1 = reduceAssociateLabels(associatedLabelsBetweenFrames_F2toF1, percentageOverlap_F2toF1, minOverlapPercentage);
+		List<List<Integer>> reducedAssociatedLabelsBetweenFrames_F1toF2 = reduceAssociateLabels(
+				associatedLabelsBetweenFrames_F1toF2, percentageOverlap_F1toF2, minOverlapPercentage);
+		List<List<Integer>> reducedAssociatedLabelsBetweenFrames_F2toF1 = reduceAssociateLabels(
+				associatedLabelsBetweenFrames_F2toF1, percentageOverlap_F2toF1, minOverlapPercentage);
 
 		// Display Results
-		System.out.println("associatedLabelsBetweenFrames_F1toF2.size " + associatedLabelsBetweenFrames_F1toF2.size());
-		System.out.println("associatedLabelsBetweenFrames_F2toF1.size " + associatedLabelsBetweenFrames_F2toF1.size());
+		if (debugOutput)
+			System.out.println(
+					"associatedLabelsBetweenFrames_F1toF2.size " + associatedLabelsBetweenFrames_F1toF2.size());
+		if (debugOutput)
+			System.out.println(
+					"associatedLabelsBetweenFrames_F2toF1.size " + associatedLabelsBetweenFrames_F2toF1.size());
 
-//		System.out.println("associatedLabelsWithinFrame_F1.size " + associatedLabelsWithinFrame_F1.size());
-//		System.out.println("associatedLabelsWithinFrame_F2.size " + associatedLabelsWithinFrame_F2.size());
+//		if(debugOutput) System.out.println("associatedLabelsWithinFrame_F1.size " + associatedLabelsWithinFrame_F1.size());
+//		if(debugOutput) System.out.println("associatedLabelsWithinFrame_F2.size " + associatedLabelsWithinFrame_F2.size());
 
-		System.out.println("percentageOverlap_F1toF2.size " + percentageOverlap_F1toF2.size());
-		System.out.println("percentageOverlap_F2toF1.size " + percentageOverlap_F2toF1.size());
+		if (debugOutput)
+			System.out.println("percentageOverlap_F1toF2.size " + percentageOverlap_F1toF2.size());
+		if (debugOutput)
+			System.out.println("percentageOverlap_F2toF1.size " + percentageOverlap_F2toF1.size());
 
-		System.out.println("reducedAssociatedLabelsBetweenFrames_F1toF2.size " + reducedAssociatedLabelsBetweenFrames_F1toF2.size());
-		System.out.println("reducedAssociatedLabelsBetweenFrames_F2toF1.size " + reducedAssociatedLabelsBetweenFrames_F2toF1.size());
+		if (debugOutput)
+			System.out.println("reducedAssociatedLabelsBetweenFrames_F1toF2.size "
+					+ reducedAssociatedLabelsBetweenFrames_F1toF2.size());
+		if (debugOutput)
+			System.out.println("reducedAssociatedLabelsBetweenFrames_F2toF1.size "
+					+ reducedAssociatedLabelsBetweenFrames_F2toF1.size());
 
 		// Viewer3D_Utils can perform marching cubes and .obj export
 
@@ -190,65 +212,78 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		List<Graph<Vector3D, DefaultEdge>> labelsSkeletonGraphs_F2 = allSkeletonsToGraphs(labelsSkeletons_F2);
 
 		// Display Results
-		System.out.println("labelsSkeletons_F1.size " + labelsSkeletons_F1.size());
-		System.out.println("labelsSkeletons_F2.size " + labelsSkeletons_F2.size());
+		if (debugOutput)
+			System.out.println("labelsSkeletons_F1.size " + labelsSkeletons_F1.size());
+		if (debugOutput)
+			System.out.println("labelsSkeletons_F2.size " + labelsSkeletons_F2.size());
 
-		System.out.println("labelsSkeletonGraphs_F1.size " + labelsSkeletonGraphs_F1.size());
-		System.out.println("labelsSkeletonGraphs_F2.size " + labelsSkeletonGraphs_F2.size());
+		if (debugOutput)
+			System.out.println("labelsSkeletonGraphs_F1.size " + labelsSkeletonGraphs_F1.size());
+		if (debugOutput)
+			System.out.println("labelsSkeletonGraphs_F2.size " + labelsSkeletonGraphs_F2.size());
 
 		/*
 		 * DETECT FUSION
 		 */
 		// Find the matched skeleton F1 to F2
-		System.out.println("\nFIND FUSION");
-		Graph<GraphNode, DefaultEdge> matchedGraphs_onF2 = matchGraphNodesBetweenFrames(labelsSkeletonGraphs_F1, labelsSkeletonGraphs_F2, reducedAssociatedLabelsBetweenFrames_F1toF2,
-				skeletonDistanceThreshold);
-		showGraphNodesAsImage(matchedGraphs_onF2, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, true, "Matched graph Fusion");
+		if (debugOutput)
+			System.out.println("\nFIND FUSION");
+		Graph<GraphNode, DefaultEdge> matchedGraphs_onF2 = matchGraphNodesBetweenFrames(labelsSkeletonGraphs_F1,
+				labelsSkeletonGraphs_F2, reducedAssociatedLabelsBetweenFrames_F1toF2, skeletonDistanceThreshold);
+		showGraphNodesAsImage(matchedGraphs_onF2, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, true,
+				"Matched graph Fusion");
 //		showGraphNodesAsImage(matchedGraphs_onF2, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, false, "Unmatched graph");
 
 		// Find all the events F1 to F2 (fusion)
 		List<Vector3D> fusionEventLocations = findEvents(matchedGraphs_onF2, labelsSkeletonGraphs_F1, true, 10);
-		ImageInt fusionEventsImage = eventsToImage(fusionEventLocations, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, "Fusion events");
+		ImageInt fusionEventsImage = eventsToImage(fusionEventLocations, labels_F1.sizeX, labels_F1.sizeY,
+				labels_F1.sizeZ, "Fusion events");
 
 		/*
 		 * DETECT FISSION
 		 */
 		// Find the matched skeleton F2 to F1
-		System.out.println("\nFIND FISSION");
-		Graph<GraphNode, DefaultEdge> matchedGraphs_onF1 = matchGraphNodesBetweenFrames(labelsSkeletonGraphs_F2, labelsSkeletonGraphs_F1, reducedAssociatedLabelsBetweenFrames_F2toF1,
-				skeletonDistanceThreshold);
-		showGraphNodesAsImage(matchedGraphs_onF1, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, true, "Matched graph Fission");
+		if (debugOutput)
+			System.out.println("\nFIND FISSION");
+		Graph<GraphNode, DefaultEdge> matchedGraphs_onF1 = matchGraphNodesBetweenFrames(labelsSkeletonGraphs_F2,
+				labelsSkeletonGraphs_F1, reducedAssociatedLabelsBetweenFrames_F2toF1, skeletonDistanceThreshold);
+		showGraphNodesAsImage(matchedGraphs_onF1, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, true,
+				"Matched graph Fission");
 //		showGraphNodesAsImage(matchedGraphs_onF1, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, false, "Unmatched graph");
 
 		// Find all the events F2 to F1 (fission)
 		List<Vector3D> fissionEventLocations = findEvents(matchedGraphs_onF1, labelsSkeletonGraphs_F2, true, 10);
-		ImageInt fissionEventsImage = eventsToImage(fissionEventLocations, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, "Fission events");
+		ImageInt fissionEventsImage = eventsToImage(fissionEventLocations, labels_F1.sizeX, labels_F1.sizeY,
+				labels_F1.sizeZ, "Fission events");
 
 		/*
 		 * DETECT DEPOLARISATION
 		 */
-		System.out.println("\nFIND DEPOLARISATION");
+		if (debugOutput)
+			System.out.println("\nFIND DEPOLARISATION");
 		// NOTE: I'm NOT using the reducedAssociatedLabelsBetweenFrames_F1toF2 list
 		// here, since for depolarisation I would err on the side of caution, and if
 		// there is a slight possibility that the even did join to another structure or
 		// moved, then I don't want to mark it
-		List<Vector3D> depolarisationEventLocations = findDepolarisationEvents(associatedLabelsBetweenFrames_F1toF2, labelVoxels_F1);
-		ImageInt depolarisationEventsImage = eventsToImage(depolarisationEventLocations, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, "Depolarisation events");
+		List<Vector3D> depolarisationEventLocations = findDepolarisationEvents(associatedLabelsBetweenFrames_F1toF2,
+				labelVoxels_F1);
+		ImageInt depolarisationEventsImage = eventsToImage(depolarisationEventLocations, labels_F1.sizeX,
+				labels_F1.sizeY, labels_F1.sizeZ, "Depolarisation events");
 
 		/*
 		 * // TEST CODE: Note the - 1, that is since background is removed, now label 1
 		 * is // at index 0. int label_F1_from = 40; int label_F1_to =
 		 * associatedLabelsWithinFrame_F1.get(label_F1_from - 1).get(0) + 1;
 		 * 
-		 * System.out.println("Structures associated within with label " +
-		 * label_F1_from); for (int label_to :
-		 * associatedLabelsWithinFrame_F1.get(label_F1_from - 1)) {
+		 * if(debugOutput) System.out.println("Structures associated within with label "
+		 * + label_F1_from); for (int label_to :
+		 * associatedLabelsWithinFrame_F1.get(label_F1_from - 1)) { if(debugOutput)
 		 * System.out.println(label_to + 1); }
 		 * 
-		 * System.out.println("Finding 5 closest points between label " + label_F1_from
-		 * + " and " + label_F1_to); // IMPORTANT NOTE: labelsSkeletons matches the
-		 * Label image and therefore // includes the background, hence no -1 for label
-		 * number List<VectorPair> closestVectorPair =
+		 * if(debugOutput) System.out.println("Finding 5 closest points between label "
+		 * + label_F1_from + " and " + label_F1_to); // IMPORTANT NOTE: labelsSkeletons
+		 * matches the Label image and therefore // includes the background, hence no -1
+		 * for label number List<VectorPair> closestVectorPair =
 		 * getClosestPointsBetweenStructures(labelsSkeletons_F1.get(label_F1_from),
 		 * labelsSkeletons_F1.get(label_F1_to), 5);
 		 */
@@ -302,17 +337,23 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			for (int label_F2 = 0; label_F2 < numLabels_F2; ++label_F2) {
 				// TODO: This line of code is very slow - consider multiplying a single label
 				// structure with the entire image in the other frame
-				Object3DVoxels intersection = labelVoxels_F1[label_F1].getIntersectionObject(labelVoxels_F2[label_F2]);
-
+				Object3DVoxels intersection = null;
 				int volumeOverlap = 0;
+				
+				if (labelVoxels_F1[label_F1].overlapBox(labelVoxels_F2[label_F2])) 
+					intersection = labelVoxels_F1[label_F1].getIntersectionObject(labelVoxels_F2[label_F2]);
+				
 				if (intersection != null) // structures are not disjoint
 					volumeOverlap = intersection.getVoxels().size();
 
 				overlappingVolumes[label_F1][label_F2] = volumeOverlap;
 
 				// This assumes a startLabel of 1
-				if (volumeOverlap != 0)
-					System.out.println("Label F1 " + (label_F1 + 1) + "  Label F2 " + (label_F2 + 1) + "  Volume Overlap " + volumeOverlap);
+				if (volumeOverlap != 0) {
+					if (debugOutput)
+						System.out.println("Label F1 " + (label_F1 + 1) + "  Label F2 " + (label_F2 + 1)
+								+ "  Volume Overlap " + volumeOverlap);
+				}
 			}
 		}
 
@@ -359,7 +400,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		return labelImageTo3DVoxelArray(labeledImage, 0);
 	}
 
-	public List<List<Integer>> getAssociatedLabelsBetweenFrames(int[][] overlappingVolumes, Point3D[] centerOfStructures_F1, int[] numVoxelsInStructures_F1, Point3D[] centerOfStructures_F2,
+	public List<List<Integer>> getAssociatedLabelsBetweenFrames(int[][] overlappingVolumes,
+			Point3D[] centerOfStructures_F1, int[] numVoxelsInStructures_F1, Point3D[] centerOfStructures_F2,
 			int[] numVoxelsInStructures_F2, float depolarisationRange, float depolarisationVolumeSimilarity) {
 		long startTime = System.currentTimeMillis();
 
@@ -373,7 +415,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				if (overlappingVolumes[i][j] > 0) {
 					tempList.add(j);
 					// This assumes a startLabel of 1
-					System.out.println("Associated between " + (i + 1) + " and " + (j + 1));
+					if (debugOutput)
+						System.out.println("Associated between " + (i + 1) + " and " + (j + 1));
 				}
 			}
 
@@ -404,7 +447,10 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 							// Prioritise the distance, if closer, and still within the voxel num range,
 							// then set as new one.
 							if (newDistance <= minDistance) { // && newVoxelRange < minVoxelRange
-								System.out.println("NOT DEPOLARISATION. Link between " + (i + 1) + " and " + (j + 1) + " with distance " + newDistance + " and voxel similarity " + newVoxelRange);
+								if (debugOutput)
+									System.out.println("NOT DEPOLARISATION. Link between " + (i + 1) + " and " + (j + 1)
+											+ " with distance " + newDistance + " and voxel similarity "
+											+ newVoxelRange);
 								minDistance = newDistance;
 								minVoxelRange = newVoxelRange;
 								F2_index = j;
@@ -417,7 +463,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				if (F2_index != Integer.MAX_VALUE) {
 					tempList.add(F2_index);
 
-					System.out.println("... SAVED Associated between " + (i + 1) + " and " + (F2_index + 1));
+					if (debugOutput)
+						System.out.println("... SAVED Associated between " + (i + 1) + " and " + (F2_index + 1));
 				}
 			}
 
@@ -425,7 +472,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		}
 
 		long endTime = System.currentTimeMillis();
-		System.out.println("getAssociatedLabelsBetweenFrames() - Total execution time: " + (endTime - startTime) + "ms");
+		System.out
+				.println("getAssociatedLabelsBetweenFrames() - Total execution time: " + (endTime - startTime) + "ms");
 
 		return associatedLabelsBetweenFrames;
 	}
@@ -452,32 +500,39 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 	}
 
 	// This is also known as Back and Forth Structure Matching
-	public List<List<Integer>> getAssociatedLabelsWithinFrame(List<List<Integer>> associatedLabelsBetweenFrames_F1, List<List<Integer>> associatedLabelsBetweenFrames_F2) {
+	public List<List<Integer>> getAssociatedLabelsWithinFrame(List<List<Integer>> associatedLabelsBetweenFrames_F1,
+			List<List<Integer>> associatedLabelsBetweenFrames_F2) {
 		long startTime = System.currentTimeMillis();
 
-		List<List<Integer>> associatedLabelsWithinFrame = new ArrayList<List<Integer>>(associatedLabelsBetweenFrames_F1.size());
+		List<List<Integer>> associatedLabelsWithinFrame = new ArrayList<List<Integer>>(
+				associatedLabelsBetweenFrames_F1.size());
 
 		// Reference counter
 		int labelIndex_F1 = 0;
 		for (List<Integer> list_F1 : associatedLabelsBetweenFrames_F1) {
 			// This assumes a startLabel of 1
-			System.out.println("Frame 1 Label: " + (labelIndex_F1 + 1));
+			if (debugOutput)
+				System.out.println("Frame 1 Label: " + (labelIndex_F1 + 1));
 			Set<Integer> tempSet = new HashSet<Integer>();
 
 			if (list_F1.size() > 0) {
 				for (int labelNum_F2 : list_F1) {
-					System.out.println("\t Frame 2 Label: " + (labelNum_F2 + 1));
+					if (debugOutput)
+						System.out.println("\t Frame 2 Label: " + (labelNum_F2 + 1));
 					for (int labelNum_F1 : associatedLabelsBetweenFrames_F2.get(labelNum_F2)) {
 						if (labelIndex_F1 != labelNum_F1) // ensure the label is not associated to itself
 						{
 							tempSet.add(labelNum_F1);
 							// This assumes a startLabel of 1
-							System.out.println("\t\t Label " + (labelIndex_F1 + 1) + " is associated with label " + (labelNum_F1 + 1));
+							if (debugOutput)
+								System.out.println("\t\t Label " + (labelIndex_F1 + 1) + " is associated with label "
+										+ (labelNum_F1 + 1));
 						}
 					}
 				}
 			} else {
-				System.out.println("\t Label " + (labelIndex_F1 + 1) + " has no associated structures in Frame 2");
+				if (debugOutput)
+					System.out.println("\t Label " + (labelIndex_F1 + 1) + " has no associated structures in Frame 2");
 			}
 
 			List<Integer> tempList = new ArrayList<Integer>();
@@ -494,7 +549,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		return associatedLabelsWithinFrame;
 	}
 
-	public List<List<Float>> getRelativePercentageOverlap(int[][] overlappingVolumes, List<List<Integer>> associatedLabelsBetweenFrames_F1) {
+	public List<List<Float>> getRelativePercentageOverlap(int[][] overlappingVolumes,
+			List<List<Integer>> associatedLabelsBetweenFrames_F1) {
 		long startTime = System.currentTimeMillis();
 
 		List<List<Float>> percentageOverlap = new ArrayList<List<Float>>(associatedLabelsBetweenFrames_F1.size());
@@ -525,7 +581,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		return percentageOverlap;
 	}
 
-	private List<List<Integer>> reduceAssociateLabels(List<List<Integer>> associatedLabelsBetweenFrames_F1toF2, List<List<Float>> percentageOverlap_F1toF2, float cutoffPercentage) {
+	private List<List<Integer>> reduceAssociateLabels(List<List<Integer>> associatedLabelsBetweenFrames_F1toF2,
+			List<List<Float>> percentageOverlap_F1toF2, float cutoffPercentage) {
 		long startTime = System.currentTimeMillis();
 
 		List<List<Integer>> reducedAssociatedLabelsBetweenFrames = new ArrayList<List<Integer>>();
@@ -537,8 +594,9 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			for (int j = 0; j < associatedLabelsBetweenFrames_F1toF2.get(i).size(); ++j) {
 				if (percentageOverlap_F1toF2.get(i).get(j) > cutoffPercentage)
 					tempList.add(associatedLabelsBetweenFrames_F1toF2.get(i).get(j));
-				else
-					System.out.println("Removed match between label " + (i + 1) + " and label " + (j + 1) + " in the other frame with percentage " + percentageOverlap_F1toF2.get(i).get(j));
+				else if (debugOutput)
+					System.out.println("Removed match between label " + (i + 1) + " and label " + (j + 1)
+							+ " in the other frame with percentage " + percentageOverlap_F1toF2.get(i).get(j));
 			}
 			reducedAssociatedLabelsBetweenFrames.add(tempList);
 		}
@@ -585,7 +643,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 		// IMPLEMENTATION 2 (reasonably fast)
 		ImageInt labeledSkeletonImage = ImageInt.wrap(skeleton);
-		ImagePlus labeledSkeletonImagePlus = labeledSkeletonImage.multiplyImage(labeledImage, (float) (1.0f / labeledSkeletonImage.getMax())).getImagePlus();
+		ImagePlus labeledSkeletonImagePlus = labeledSkeletonImage
+				.multiplyImage(labeledImage, (float) (1.0f / labeledSkeletonImage.getMax())).getImagePlus();
 //		labeledSkeletonImagePlus.show(); 
 		// this is a 32 bit image, and as soon as I wrap it to int it becomes 16-bit,
 		// but then all the numbers change (rescales)... There might be a more elegant
@@ -598,7 +657,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 		labelsSkeletons = Arrays.asList(labelImageTo3DVoxelArray(labeledSkeletonImage, 1));
 
-		System.out.println("Number of skeletons: " + labelsSkeletons.size());
+		if (debugOutput)
+			System.out.println("Number of skeletons: " + labelsSkeletons.size());
 
 		// ensure that no structures were accidentally completely removed during
 		// skeletonization (which sometimes happens for small structures)
@@ -613,10 +673,13 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				tempList.add(centerVoxel);
 				labelsSkeletons.set(i, new Object3DVoxels(tempList));
 
-				System.out.println("SKELETON, Added for label " + (i + 1) + " at " + centerVoxel);
+				if (debugOutput)
+					System.out.println("SKELETON, Added for label " + (i + 1) + " at " + centerVoxel);
 			}
 
-			System.out.println("Label " + (i + 1) + " skeleton size " + labelsSkeletons.get(i).getVoxels().size() + " label volume " + (new Object3DVoxels(labeledImage, (i + 1)).getVoxels().size()));
+			if (debugOutput)
+				System.out.println("Label " + (i + 1) + " skeleton size " + labelsSkeletons.get(i).getVoxels().size()
+						+ " label volume " + (new Object3DVoxels(labeledImage, (i + 1)).getVoxels().size()));
 		}
 
 		// IMPLEMENTATION 3 (quite slow)
@@ -667,13 +730,15 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 	public List<Graph<Vector3D, DefaultEdge>> allSkeletonsToGraphs(List<Object3DVoxels> labelsSkeletons) {
 		long startTime = System.currentTimeMillis();
 
-		List<Graph<Vector3D, DefaultEdge>> labelsSkeletonGraphs = new ArrayList<Graph<Vector3D, DefaultEdge>>(labelsSkeletons.size());
+		List<Graph<Vector3D, DefaultEdge>> labelsSkeletonGraphs = new ArrayList<Graph<Vector3D, DefaultEdge>>(
+				labelsSkeletons.size());
 
 		for (Object3DVoxels skeletonVoxels : labelsSkeletons) {
 			labelsSkeletonGraphs.add(skeletonToGraph(skeletonVoxels));
 		}
 
-		System.out.println("Number of graphs: " + labelsSkeletonGraphs.size());
+		if (debugOutput)
+			System.out.println("Number of graphs: " + labelsSkeletonGraphs.size());
 
 		long endTime = System.currentTimeMillis();
 		System.out.println("allSkeletonsToGraphs() - Total execution time: " + (endTime - startTime) + "ms");
@@ -707,10 +772,12 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //	    }
 	};
 
-	public List<VectorPair> getClosestPointsBetweenStructures(Object3DVoxels structureA, Object3DVoxels structureB, int nClosest) {
+	public List<VectorPair> getClosestPointsBetweenStructures(Object3DVoxels structureA, Object3DVoxels structureB,
+			int nClosest) {
 		long startTime = System.currentTimeMillis();
 
-		List<VectorPair> allVectorPairs = new ArrayList<VectorPair>(structureA.getVoxels().size() * structureB.getVoxels().size());
+		List<VectorPair> allVectorPairs = new ArrayList<VectorPair>(
+				structureA.getVoxels().size() * structureB.getVoxels().size());
 
 		for (Voxel3D voxelA : structureA.getVoxels()) {
 			for (Voxel3D voxelB : structureB.getVoxels()) {
@@ -722,10 +789,12 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		Collections.sort(allVectorPairs); // , Collections.reverseOrder());
 
 		long endTime = System.currentTimeMillis();
-		System.out.println("getClosestPointsBetweenStructures() - Total execution time: " + (endTime - startTime) + "ms");
+		System.out
+				.println("getClosestPointsBetweenStructures() - Total execution time: " + (endTime - startTime) + "ms");
 
 		for (VectorPair pair : allVectorPairs.subList(0, Math.min(nClosest, allVectorPairs.size()))) {
-			System.out.println(pair);
+			if (debugOutput)
+				System.out.println(pair);
 		}
 
 		return allVectorPairs.subList(0, Math.min(nClosest, allVectorPairs.size()));
@@ -753,13 +822,15 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 		public String toString() {
 			// +1 since background not included
-			return "Node Location: " + this.location + " Related Label: " + (this.relatedLabelInOtherFrame + 1) + " This Label: " + (this.relatedLabelInThisFrame + 1) + " Distance to related: "
+			return "Node Location: " + this.location + " Related Label: " + (this.relatedLabelInOtherFrame + 1)
+					+ " This Label: " + (this.relatedLabelInThisFrame + 1) + " Distance to related: "
 					+ this.distanceToRelated;
 		}
 
 		public boolean sameLocation(Vector3D other) {
 			// return location == other;
-			return Math.round(location.x) == Math.round(other.x) && Math.round(location.y) == Math.round(other.y) && Math.round(location.z) == Math.round(other.z);
+			return Math.round(location.x) == Math.round(other.x) && Math.round(location.y) == Math.round(other.y)
+					&& Math.round(location.z) == Math.round(other.z);
 		}
 
 		public boolean sameLocation(GraphNode other) {
@@ -781,8 +852,9 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 	}
 
 	// The index of the graph in the provided list matches the label number
-	private Graph<GraphNode, DefaultEdge> matchGraphNodesBetweenFrames(List<Graph<Vector3D, DefaultEdge>> graphs_F1, List<Graph<Vector3D, DefaultEdge>> graphs_F2,
-			List<List<Integer>> associatedLabelsBetweenFrames_F1toF2, float allowedDistance) {
+	private Graph<GraphNode, DefaultEdge> matchGraphNodesBetweenFrames(List<Graph<Vector3D, DefaultEdge>> graphs_F1,
+			List<Graph<Vector3D, DefaultEdge>> graphs_F2, List<List<Integer>> associatedLabelsBetweenFrames_F1toF2,
+			float allowedDistance) {
 		long startTime = System.currentTimeMillis();
 
 		Graph<GraphNode, DefaultEdge> matchedGraphs_onF2 = new DefaultUndirectedGraph<>(DefaultEdge.class);
@@ -799,7 +871,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			if (associatedLabelsBetweenFrames_F1toF2.get(labelNum_F1).size() == 0) {
 				// TODO: WRITE THE END CODE
 				// This label might be depolarising
-				System.out.println("CONTINUED for labelNum_F1 " + (labelNum_F1 + 1));
+				if (debugOutput)
+					System.out.println("CONTINUED for labelNum_F1 " + (labelNum_F1 + 1));
 				continue;
 			}
 
@@ -820,13 +893,17 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			}
 
 			//// DEBUG
-			System.out.println("Label F1 " + (labelNum_F1 + 1) + " has " + tempAssociatedCompositeGraph.vertexSet().size() + " voxels in F2");
+			if (debugOutput)
+				System.out.println("Label F1 " + (labelNum_F1 + 1) + " has "
+						+ tempAssociatedCompositeGraph.vertexSet().size() + " voxels in F2");
 			if (tempAssociatedCompositeGraph.vertexSet().size() == 0) {
-				System.out.println("associatedLabelsBetweenFrames_F1toF2 for label " + (labelNum_F1 + 1));
+				if (debugOutput)
+					System.out.println("associatedLabelsBetweenFrames_F1toF2 for label " + (labelNum_F1 + 1));
 				for (int labelNum_F2 : associatedLabelsBetweenFrames_F1toF2.get(labelNum_F1)) {
 					System.out.print((labelNum_F2 + 1) + ", ");
 				}
-				System.out.println("");
+				if (debugOutput)
+					System.out.println("");
 			}
 			////
 
@@ -862,19 +939,23 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 						if (distanceBetweenNodes == -1 || testDistanceBetweenNodes < distanceBetweenNodes) {
 							distanceBetweenNodes = testDistanceBetweenNodes; // new minimum distance
 
-							if (backupNewGraphNode == null || distanceBetweenNodes < backupNewGraphNode.distanceToRelated) {
+							if (backupNewGraphNode == null
+									|| distanceBetweenNodes < backupNewGraphNode.distanceToRelated) {
 								// the current "closest" Frame 1 voxel to the current Frame 2 voxel
-								backupNewGraphNode = new GraphNode(nodeVoxel_F2.getVector3D(), labelNum_F1, (int) nodeVoxel_F2.value, distanceBetweenNodes);
+								backupNewGraphNode = new GraphNode(nodeVoxel_F2.getVector3D(), labelNum_F1,
+										(int) nodeVoxel_F2.value, distanceBetweenNodes);
 							}
 						}
 					}
 				}
-				// System.out.println("Calculated closest distanceBetweenNodes = " +
+				// if(debugOutput) System.out.println("Calculated closest distanceBetweenNodes =
+				// " +
 				// distanceBetweenNodes);
 
 				// If it should be added, this is the new graph node that will be added to the
 				// Matched Graph
-				GraphNode newFrame2GraphNode = new GraphNode(nodeVoxel_F2.getVector3D(), labelNum_F1, (int) nodeVoxel_F2.value, distanceBetweenNodes);
+				GraphNode newFrame2GraphNode = new GraphNode(nodeVoxel_F2.getVector3D(), labelNum_F1,
+						(int) nodeVoxel_F2.value, distanceBetweenNodes);
 
 				boolean shouldAdd = false; // don't add by default
 				// check if it already exists in the graph for another Frame 1 label
@@ -882,43 +963,52 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				// if node already exist, but has a different label associated to it, but with a
 				// greater distance, then choose to use smaller distance, hence remove
 				if (existingNode != null) {
-					// System.out.println("EXISTING " + existingNode);
+					// if(debugOutput) System.out.println("EXISTING " + existingNode);
 					shouldAdd = false;
 					// if there was a closest node && (new distance is less than existing distance
 					// || existingNode in Frame 2 has no related structure in Frame 1)
-					if (distanceBetweenNodes != -1 && (distanceBetweenNodes < existingNode.distanceToRelated || existingNode.distanceToRelated == -1)) {
+					if (distanceBetweenNodes != -1 && (distanceBetweenNodes < existingNode.distanceToRelated
+							|| existingNode.distanceToRelated == -1)) {
 						// This if statement prevents certain existing labels to be completely removed
 						// since some other label is always closer
 						// if, however, it has been detected before in some other location and that
 						// detected distance was smaller, now you may happily
 						// replace it in this location
-						float existingMinDistance = existingMatchedMinDistance.containsKey(existingNode.relatedLabelInOtherFrame)
-								? existingMatchedMinDistance.get(existingNode.relatedLabelInOtherFrame)
-								: Float.POSITIVE_INFINITY;
-						if (existingMatchedMinDistance.containsKey(existingNode.relatedLabelInOtherFrame) && existingMinDistance < existingNode.distanceToRelated) {
+						float existingMinDistance = existingMatchedMinDistance
+								.containsKey(existingNode.relatedLabelInOtherFrame)
+										? existingMatchedMinDistance.get(existingNode.relatedLabelInOtherFrame)
+										: Float.POSITIVE_INFINITY;
+						if (existingMatchedMinDistance.containsKey(existingNode.relatedLabelInOtherFrame)
+								&& existingMinDistance < existingNode.distanceToRelated) {
 							// remove existing node in same location
-							System.out.println("REPLACED: " + existingNode);
+							if (debugOutput)
+								System.out.println("REPLACED: " + existingNode);
 							matchedGraphs_onF2.removeVertex(existingNode);
 							shouldAdd = true;
 						}
 						// if, however, it has already been detected before, and now the new distance is
 						// smaller, then this is the one you should keep,
 						// replace the previous one, and also save this case, to for future
-						else if (existingMatchedMinDistance.containsKey(existingNode.relatedLabelInOtherFrame) && existingMinDistance >= existingNode.distanceToRelated) {
-							System.out.println("EXISTING " + existingNode);
+						else if (existingMatchedMinDistance.containsKey(existingNode.relatedLabelInOtherFrame)
+								&& existingMinDistance >= existingNode.distanceToRelated) {
+							if (debugOutput)
+								System.out.println("EXISTING " + existingNode);
 
 							// remove old location and label from graph (this is not the same location as
 							// the currently processed newFrame2GraphNode)
-							System.out.println("  was REPLACED: " + backupExistingNodeShouldOverwrite);
+							if (debugOutput)
+								System.out.println("  was REPLACED: " + backupExistingNodeShouldOverwrite);
 							matchedGraphs_onF2.removeVertex(backupExistingNodeShouldOverwrite);
 
 							// replace that old location vertex with a new label
 							matchedGraphs_onF2.addVertex(backupNewGraphNodeShouldOverwrite);
-							System.out.println("    ...WITH: " + backupNewGraphNodeShouldOverwrite);
+							if (debugOutput)
+								System.out.println("    ...WITH: " + backupNewGraphNodeShouldOverwrite);
 							associatedNodePairsMatched++;
 
 							// replace to store the new minimum distance
-							existingMatchedMinDistance.replace(existingNode.relatedLabelInOtherFrame, existingNode.distanceToRelated);
+							existingMatchedMinDistance.replace(existingNode.relatedLabelInOtherFrame,
+									existingNode.distanceToRelated);
 
 							// store the currently considered graph nodes, in case a similar replacement
 							// must be done in future
@@ -929,7 +1019,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 						// 1 label yet, never replace the first time if an existing
 						// label is detected, since that might be the only place that label is stored.
 						else {
-							existingMatchedMinDistance.put(existingNode.relatedLabelInOtherFrame, existingNode.distanceToRelated);
+							existingMatchedMinDistance.put(existingNode.relatedLabelInOtherFrame,
+									existingNode.distanceToRelated);
 
 							// store backup in case they need to be replaced in future
 							backupExistingNodeShouldOverwrite = existingNode;
@@ -938,21 +1029,23 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 						}
 					}
 //					else {
-//						 System.out.println("WON'T ADD label F1 " + (labelNum_F1 + 1) + " with distance " 
+//						 if(debugOutput) System.out.println("WON'T ADD label F1 " + (labelNum_F1 + 1) + " with distance " 
 //								 + distanceBetweenNodes + " since existing is closer " +existingNode);
 //					}
-				} else if (newFrame2GraphNode.distanceToRelated != -1) { // No existing node, therefore NEW node, always add
+				} else if (newFrame2GraphNode.distanceToRelated != -1) { // No existing node, therefore NEW node, always
+																			// add
 					shouldAdd = true;
 				}
 
 				if (shouldAdd) {
 					matchedGraphs_onF2.addVertex(newFrame2GraphNode);
-					// System.out.println("ADDED: " + newFrame2GraphNode);
+					// if(debugOutput) System.out.println("ADDED: " + newFrame2GraphNode);
 					associatedNodePairsMatched++;
 
 					// if label already exists, then increment count
 					if (numNodesPerF1Label.containsKey(newFrame2GraphNode.relatedLabelInOtherFrame)) {
-						numNodesPerF1Label.replace(newFrame2GraphNode.relatedLabelInOtherFrame, numNodesPerF1Label.get(newFrame2GraphNode.relatedLabelInOtherFrame) + 1);
+						numNodesPerF1Label.replace(newFrame2GraphNode.relatedLabelInOtherFrame,
+								numNodesPerF1Label.get(newFrame2GraphNode.relatedLabelInOtherFrame) + 1);
 					} else // else create a new one and set count to 1
 					{
 						numNodesPerF1Label.put(newFrame2GraphNode.relatedLabelInOtherFrame, 1);
@@ -963,9 +1056,11 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 			// if the newGraphNode was never added due to existing waiting to check for
 			// duplicate, then add it now
-			if (backupNewGraphNodeShouldOverwrite != null && findDuplicateGraphNode(matchedGraphs_onF2, backupNewGraphNodeShouldOverwrite) != null) {
+			if (backupNewGraphNodeShouldOverwrite != null
+					&& findDuplicateGraphNode(matchedGraphs_onF2, backupNewGraphNodeShouldOverwrite) != null) {
 				matchedGraphs_onF2.addVertex(backupNewGraphNodeShouldOverwrite);
-				System.out.println("\tADDED last New Graph node, since never added: " + backupNewGraphNode);
+				if (debugOutput)
+					System.out.println("\tADDED last New Graph node, since never added: " + backupNewGraphNode);
 			}
 
 			// if there were associatedLabels but now there are none due to distance
@@ -974,21 +1069,22 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			// TODO: Check this "backup add" code if it still makes sense
 			if (associatedNodePairsMatched == 0) {
 				// TODO: This label has no associated fusion/fission event,
-				// and therefore might depolarise or nothing (but remember, this is only due to distance threshold)
-				System.out.println("\tERROR NO MATCHING for Label F1 " + (labelNum_F1 + 1));
+				// and therefore might depolarise or nothing (but remember, this is only due to
+				// distance threshold)
+				if (debugOutput)
+					System.out.println("\tERROR NO MATCHING for Label F1 " + (labelNum_F1 + 1));
 
 				if (backupExistingNode != null)
 					matchedGraphs_onF2.removeVertex(backupExistingNode);
-				
-				if(backupNewGraphNode != null)
-				{
+
+				if (backupNewGraphNode != null) {
 					matchedGraphs_onF2.addVertex(backupNewGraphNode);
-					System.out.println("\t...ADDED BACKUP: " + backupNewGraphNode);
+					if (debugOutput)
+						System.out.println("\t...ADDED BACKUP: " + backupNewGraphNode);
 					associatedNodePairsMatched = 1;
-				}
-				else
-				{
-					System.out.println("\t... THERE WAS NO BACKUP TO ADD");
+				} else {
+					if (debugOutput)
+						System.out.println("\t... THERE WAS NO BACKUP TO ADD");
 				}
 			}
 		}
@@ -998,15 +1094,19 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		List<GraphNode> nodesToRemove = new ArrayList<GraphNode>();
 		for (GraphNode nodeA : matchedGraphs_onF2.vertexSet()) {
 			for (GraphNode nodeB : matchedGraphs_onF2.vertexSet()) {
-				if (nodeA.sameLocation(nodeB) && (nodeA.distanceToRelated == -1 || nodeB.distanceToRelated == -1) && (nodeA.distanceToRelated != nodeB.distanceToRelated)) {
-					System.out.println("MATCHED " + nodeA + " and " + nodeB);
+				if (nodeA.sameLocation(nodeB) && (nodeA.distanceToRelated == -1 || nodeB.distanceToRelated == -1)
+						&& (nodeA.distanceToRelated != nodeB.distanceToRelated)) {
+					if (debugOutput)
+						System.out.println("MATCHED " + nodeA + " and " + nodeB);
 					if (nodeA.distanceToRelated == -1) {
-						System.out.println("   ...therefore REMOVED " + nodeA);
+						if (debugOutput)
+							System.out.println("   ...therefore REMOVED " + nodeA);
 						nodesToRemove.add(nodeA);
 					}
 
 					if (nodeB.distanceToRelated == -1) {
-						System.out.println("   ...therefore REMOVED " + nodeB);
+						if (debugOutput)
+							System.out.println("   ...therefore REMOVED " + nodeB);
 						nodesToRemove.add(nodeB);
 					}
 				}
@@ -1021,7 +1121,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //		for (GraphNode node : matchedGraphs_onF2.vertexSet()) {
 //			GraphNode existingNode = findDuplicateGraphNode(matchedGraphs_onF2, node);
 //			if (existingNode != null && node.distanceToRelated == existingNode.distanceToRelated) {
-//				System.out.println("FOUND DUPLICATE " + node);
+//				if(debugOutput) System.out.println("FOUND DUPLICATE " + node);
 //				if(existingNode.distanceToRelated == -1)
 //					matchedGraphs_onF2.removeVertex(existingNode);
 //			}
@@ -1041,12 +1141,14 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 		for (GraphNode node1 : inputGraph.vertexSet()) {
 			for (GraphNode node2 : inputGraph.vertexSet()) {
-				Vector3D diff = new Vector3D(Math.abs(node1.location.x - node2.location.x), Math.abs(node1.location.y - node2.location.y), Math.abs(node1.location.z - node2.location.z));
+				Vector3D diff = new Vector3D(Math.abs(node1.location.x - node2.location.x),
+						Math.abs(node1.location.y - node2.location.y), Math.abs(node1.location.z - node2.location.z));
 
 				if (0 <= diff.x && diff.x <= 1 && 0 <= diff.y && diff.y <= 1 && 0 <= diff.z && diff.z <= 1) {
 					if (!inputGraph.containsEdge(node1, node2)) {
 						inputGraph.addEdge(node1, node2);
-						// System.out.println("ADDED EDGE: from " + node1 + " to " + node2);
+						// if(debugOutput) System.out.println("ADDED EDGE: from " + node1 + " to " +
+						// node2);
 					}
 
 				}
@@ -1060,7 +1162,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 	}
 
 	// This renders the graph as a an Image (mainly for debugging purposes
-	public void showGraphNodesAsImage(Graph<GraphNode, DefaultEdge> inputGraph, int width, int height, int nSlices, boolean showMatched, String title) {
+	public void showGraphNodesAsImage(Graph<GraphNode, DefaultEdge> inputGraph, int width, int height, int nSlices,
+			boolean showMatched, String title) {
 		ImagePlus graphImage = NewImage.createImage("Graph Image", width, height, nSlices, 16, NewImage.FILL_BLACK);
 
 		ImageHandler ih = ImageHandler.wrap(graphImage);
@@ -1069,9 +1172,13 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			Vector3D v = node.location;
 
 			if (showMatched && node.distanceToRelated != -1)
-				ih.setPixel((int) v.x, (int) v.y, (int) v.z, node.relatedLabelInOtherFrame + 1); // +1 since the skeleton does not include background
+				ih.setPixel((int) v.x, (int) v.y, (int) v.z, node.relatedLabelInOtherFrame + 1); // +1 since the
+																									// skeleton does not
+																									// include
+																									// background
 			else if (!showMatched && node.distanceToRelated == -1)
-				ih.setPixel((int) v.x, (int) v.y, (int) v.z, Integer.MAX_VALUE); // +1 since the skeleton does not include background
+				ih.setPixel((int) v.x, (int) v.y, (int) v.z, Integer.MAX_VALUE); // +1 since the skeleton does not
+																					// include background
 
 		}
 
@@ -1094,7 +1201,9 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 	// run along the graph until I find a transition between two labels and that is
 	// presumably the event location.
-	public List<Vector3D> findEvents(Graph<GraphNode, DefaultEdge> inputGraph, List<Graph<Vector3D, DefaultEdge>> labelsSkeletonGraphs, boolean removeDuplicates, float duplicateDistance) {
+	public List<Vector3D> findEvents(Graph<GraphNode, DefaultEdge> inputGraph,
+			List<Graph<Vector3D, DefaultEdge>> labelsSkeletonGraphs, boolean removeDuplicates,
+			float duplicateDistance) {
 		long startTime = System.currentTimeMillis();
 
 		List<Vector3D> eventList = new ArrayList<Vector3D>();
@@ -1104,7 +1213,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		for (GraphNode node1 : inputGraph.vertexSet()) {
 			for (GraphNode node2 : inputGraph.vertexSet()) {
 				// calculate the vector between the two nodes
-				Vector3D diff = new Vector3D(Math.abs(node1.location.x - node2.location.x), Math.abs(node1.location.y - node2.location.y), Math.abs(node1.location.z - node2.location.z));
+				Vector3D diff = new Vector3D(Math.abs(node1.location.x - node2.location.x),
+						Math.abs(node1.location.y - node2.location.y), Math.abs(node1.location.z - node2.location.z));
 
 				// the two voxels are neighbouring
 				if (0 <= diff.x && diff.x <= 1 && 0 <= diff.y && diff.y <= 1 && 0 <= diff.z && diff.z <= 1) {
@@ -1114,8 +1224,10 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 						if (!eventList.contains(eventLocation)) {
 							eventList.add(eventLocation);
-							System.out.println("EVENT LOCATION " + eventLocation + " label 1 " + (node1.relatedLabelInOtherFrame + 1) + " label 2 " + (node2.relatedLabelInOtherFrame + 1)
-									+ " with diff " + diff.toString());
+							if (debugOutput)
+								System.out.println("EVENT LOCATION " + eventLocation + " label 1 "
+										+ (node1.relatedLabelInOtherFrame + 1) + " label 2 "
+										+ (node2.relatedLabelInOtherFrame + 1) + " with diff " + diff.toString());
 						}
 					}
 				}
@@ -1142,7 +1254,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //			}
 //
 //			for (int i = 0; i < nearbyEventsList.size(); i++) {
-//				System.out.println(i);
+//				if(debugOutput) System.out.println(i);
 //				List<Vector3D> nearbyEvents = nearbyEventsList.get(i);
 //				if (nearbyEvents.size() > 1) { // since normal event also included
 //					Vector3D averageEventLocation = nearbyEvents.get(0);
@@ -1159,7 +1271,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //
 //					eventList.add(averageEventLocation);
 //
-//					System.out.println("ADDED AVERAGE " + averageEventLocation);
+//					if(debugOutput) System.out.println("ADDED AVERAGE " + averageEventLocation);
 //				}
 //			}
 		}
@@ -1174,7 +1286,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 	// entire labeled structure of the other label
 	// it then finds the closest point in the other structures to the first point
 	// and calculates the halfway point from those two.
-	public Vector3D getMinHalfwayPoint(Vector3D point, Graph<Vector3D, DefaultEdge> labeledGraph, boolean makeIntegerOutput) {
+	public Vector3D getMinHalfwayPoint(Vector3D point, Graph<Vector3D, DefaultEdge> labeledGraph,
+			boolean makeIntegerOutput) {
 		Vector3D halfwayPoint = null;
 		float distance = Float.POSITIVE_INFINITY;
 
@@ -1205,14 +1318,16 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		return halfwayPoint;
 	}
 
-	public List<Vector3D> findDepolarisationEvents(List<List<Integer>> associatedLabelsBetweenFrames, Object3DVoxels[] labeledVoxels) {
+	public List<Vector3D> findDepolarisationEvents(List<List<Integer>> associatedLabelsBetweenFrames,
+			Object3DVoxels[] labeledVoxels) {
 		long startTime = System.currentTimeMillis();
 
 		List<Vector3D> eventList = new ArrayList<Vector3D>();
 
 		for (int i = 0; i < associatedLabelsBetweenFrames.size(); ++i) {
 			if (associatedLabelsBetweenFrames.get(i).size() == 0) {
-				System.out.println("Depolaristaion detected at label " + (i + 1));
+				if (debugOutput)
+					System.out.println("Depolaristaion detected at label " + (i + 1));
 
 				Point3D centerPoint = labeledVoxels[i].getCenterAsPoint();
 				centerPoint.x = Math.round(centerPoint.x);
@@ -1230,7 +1345,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		return eventList;
 	}
 
-	public Graph<Vector3D, DefaultEdge> eventsToGraph(List<Vector3D> eventsList, boolean removeDuplicates, float duplicateDistance) {
+	public Graph<Vector3D, DefaultEdge> eventsToGraph(List<Vector3D> eventsList, boolean removeDuplicates,
+			float duplicateDistance) {
 		Graph<Vector3D, DefaultEdge> eventsGraph = new DefaultUndirectedGraph<>(DefaultEdge.class);
 
 		// add all vertices to graph
@@ -1262,14 +1378,16 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 						}
 						Vector3D averageEventLocation = toRemove.get(0);
 						eventsGraph.removeVertex(toRemove.get(0));
-						System.out.println("REMOVED duplicate " + toRemove.get(0));
+						if (debugOutput)
+							System.out.println("REMOVED duplicate " + toRemove.get(0));
 						int count;
 						for (count = 1; count < toRemove.size(); count++) {
 							Vector3D removeVertex = toRemove.get(count);
 							averageEventLocation = averageEventLocation.add(removeVertex);
 
 							eventsGraph.removeVertex(removeVertex);
-							System.out.println("REMOVED " + removeVertex);
+							if (debugOutput)
+								System.out.println("REMOVED " + removeVertex);
 						}
 
 						averageEventLocation = averageEventLocation.multiply(1.0 / count);
@@ -1278,7 +1396,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 						averageEventLocation.z = Math.round(averageEventLocation.z);
 
 						eventsGraph.addVertex(averageEventLocation);
-						System.out.println("ADDED AVERAGE of duplicates " + averageEventLocation);
+						if (debugOutput)
+							System.out.println("ADDED AVERAGE of duplicates " + averageEventLocation);
 						break; // since my loop is no longer valid with vertices added and removed
 					}
 				}
@@ -1293,13 +1412,16 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		for (int i = 0; i < eventList.size(); ++i) {
 			if (eventList.get(i).distance(location) == 0) {
 				eventList.remove(i);
-				System.out.println("Succesfully removed " + location);
+				if (debugOutput)
+					System.out.println("Succesfully removed " + location);
 				break;
 			}
 		}
 
-		if (initialSize == eventList.size())
-			System.out.println("NO DUPLICATES DEMOVED for " + location);
+		if (initialSize == eventList.size()) {
+			if (debugOutput)
+				System.out.println("NO DUPLICATES DEMOVED for " + location);
+		}
 
 		return eventList;
 	}
