@@ -237,6 +237,12 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		List<Vector3D> depolarisationEventLocations = findDepolarisationEvents(associatedLabelsBetweenFrames_F1toF2, labelVoxels_F1);
 		ImageInt depolarisationEventsImage = eventsToImage(depolarisationEventLocations, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, "Depolarisation events");
 
+		int fusionEventCount = fusionEventLocations.size();
+		int fissionEventCount = fissionEventLocations.size();
+		int depolarisationEventCount = depolarisationEventLocations.size();
+		System.out.println(String.format("Number of events:\n\tFusion = %d\n\tFission = %d\n\tDepolarisation = %d", fusionEventCount, fissionEventCount, depolarisationEventCount));
+		System.out.println("Fission:Fusion ratio = " + ((float) fissionEventCount / (float)fusionEventCount));
+
 		/*
 		 * // TEST CODE: Note the - 1, that is since background is removed, now label 1
 		 * is // at index 0. int label_F1_from = 40; int label_F1_to =
@@ -304,8 +310,9 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			for (int label_F2 = 0; label_F2 < numLabels_F2; ++label_F2) {
 				// TODO: This line of code is very slow - consider multiplying a single label
 				// structure with the entire image in the other frame
-				Object3DVoxels intersection = labelVoxels_F1[label_F1].getIntersectionObject(labelVoxels_F2[label_F2]);;
-				
+				Object3DVoxels intersection = labelVoxels_F1[label_F1].getIntersectionObject(labelVoxels_F2[label_F2]);
+				;
+
 				int volumeOverlap = 0;
 				if (intersection != null) // structures are not disjoint
 					volumeOverlap = intersection.getVoxels().size();
