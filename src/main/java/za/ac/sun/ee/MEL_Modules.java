@@ -17,7 +17,9 @@ import org.jgrapht.Graph;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DefaultUndirectedGraph;
 import org.jgrapht.traverse.DepthFirstIterator;
+import org.scijava.ItemIO;
 import org.scijava.command.Command;
+import org.scijava.plugin.Attr;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 //import org.scijava.table.DefaultGenericTable;
@@ -53,41 +55,37 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-@Plugin(type = Command.class, menuPath = "Plugins>MEL Process")
+//, attrs = {@Attr(name = "no-legacy") }
+@Plugin(type = Command.class, name = "MEL", description = "Automatically calculate the mitochondrial fission, fusion and depolarisation event locations ", menuPath = "Plugins>MEL Process", headless = true)
 public class MEL_Modules<T extends RealType<T>> implements Command {
-	//
-	// Feel free to add more parameters here...
-	//
 
-	@Parameter
-	private Dataset currentData;
+//	@Parameter
+//	private Dataset currentData;
+//
+//	@Parameter
+//	private UIService uiService;
+//
+//	@Parameter
+//	private OpService opService;
 
-	@Parameter
-	private UIService uiService;
+	@Parameter(label = "The minimum volume of the thresholded structures", type = ItemIO.INPUT, required = false)
+	private int minStructureVolume; // 5 // TODO: This can be dependent on Voxel size (see Mitochondrial Analyzer macro)
 
-	@Parameter
-	private OpService opService;
-
-	@Parameter
-	private int minStructureVolume = 5; // TODO: This can be dependent on Voxel size (see Mitochondrial Analyzer macro)
-
-	@Parameter
+	// @Parameter
 	private float minOverlapPercentage = 0.1f;
 
-	@Parameter
+	// @Parameter
 	private float skeletonDistanceThreshold = 20;
 
-	@Parameter
+	// @Parameter
 	private float depolarisationRangeThreshold = 50;
 
-	@Parameter
-	private float depolarisationVolumeSimilarityThreshold = 0.2f; // this is a percentage: 0 means that they must be
-																	// eactly the same, 0.2 means
-																	// that the other structure may be 20% larger or
-																	// smaller
+	// @Parameter
+	private float depolarisationVolumeSimilarityThreshold = 0.2f; // this is a percentage: 0 means that they must be exactly the same, 0.2 means
+																	// that the other structure may be 20% larger or smaller
 
-	@Parameter
-	private boolean debugOutput = false;
+	@Parameter(label = "Display full debug output in the console", type = ItemIO.INPUT, persist = false, required = false)
+	private boolean debugOutput;
 
 	@Override
 	public void run() {
@@ -247,20 +245,17 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		int fissionEventCount = fissionEventLocations.size();
 		int depolarisationEventCount = depolarisationEventLocations.size();
 		System.out.println(String.format("Number of events:\n\tFusion = %d\n\tFission = %d\n\tDepolarisation = %d", fusionEventCount, fissionEventCount, depolarisationEventCount));
-		System.out.println("Fission:Fusion ratio = " + ((float) fissionEventCount / (float)fusionEventCount));
-		
-		
+		System.out.println("Fission:Fusion ratio = " + ((float) fissionEventCount / (float) fusionEventCount));
+
 		ResultsTable table = ResultsTable.getResultsTable();
 		table.incrementCounter();
-		
+
 		table.addValue("Fusion events", fusionEventCount);
 		table.addValue("Fission events", fissionEventCount);
 		table.addValue("Depolarisation events", depolarisationEventCount);
-		// table.addColumns();		
-		
+		// table.addColumns();
+
 		table.show("MEL Results");
-		
-	
 
 		/*
 		 * // TEST CODE: Note the - 1, that is since background is removed, now label 1
@@ -1401,28 +1396,28 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 	 * @param args whatever, it's ignored
 	 * @throws Exception
 	 */
-	public static void main(final String... args) throws Exception {
-		// create the ImageJ application context with all available services
-		final ImageJ ij = new ImageJ();
-//        ij.ui().showUI();
-
-		// ask the user for a file to open
-		final File file = ij.ui().chooseFile(null, "open");
-
-//		open("C:/Users/rptheart/Dropbox/Research/MitoMorph/MEL_fiji/Frame1_Thresholded.tif");
-//		open("C:/Users/rptheart/Dropbox/Research/MitoMorph/MEL_fiji/Frame2_Thresholded.tif");
-
-		if (file != null) {
-			// load the dataset
-			final Dataset dataset = ij.scifio().datasetIO().open(file.getPath());
-
-			// show the image
-			ij.ui().show(dataset);
-
-			// invoke the plugin
-			ij.command().run(MEL_Modules.class, true);
-
-		}
-	}
+//	public static void main(final String... args) throws Exception {
+//		// create the ImageJ application context with all available services
+//		final ImageJ ij = new ImageJ();
+////        ij.ui().showUI();
+//
+//		// ask the user for a file to open
+//		final File file = ij.ui().chooseFile(null, "open");
+//
+////		open("C:/Users/rptheart/Dropbox/Research/MitoMorph/MEL_fiji/Frame1_Thresholded.tif");
+////		open("C:/Users/rptheart/Dropbox/Research/MitoMorph/MEL_fiji/Frame2_Thresholded.tif");
+//
+//		if (file != null) {
+//			// load the dataset
+//			final Dataset dataset = ij.scifio().datasetIO().open(file.getPath());
+//
+//			// show the image
+//			ij.ui().show(dataset);
+//
+//			// invoke the plugin
+//			ij.command().run(MEL_Modules.class, true);
+//
+//		}
+//	}
 
 }
