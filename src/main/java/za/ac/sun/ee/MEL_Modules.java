@@ -20,12 +20,18 @@ import org.jgrapht.traverse.DepthFirstIterator;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
+//import org.scijava.table.DefaultGenericTable;
+//import org.scijava.table.DoubleColumn;
+//import org.scijava.table.GenericTable;
+//import org.scijava.table.IntColumn;
+//import org.scijava.table.Table;
 import org.scijava.ui.UIService;
 
 import ij.IJ;
 import ij.ImagePlus;
 import ij.WindowManager;
 import ij.gui.NewImage;
+import ij.measure.ResultsTable;
 import mcib3d.geom.Object3DVoxels;
 import mcib3d.geom.Point3D;
 import mcib3d.geom.Vector3D;
@@ -242,6 +248,19 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		int depolarisationEventCount = depolarisationEventLocations.size();
 		System.out.println(String.format("Number of events:\n\tFusion = %d\n\tFission = %d\n\tDepolarisation = %d", fusionEventCount, fissionEventCount, depolarisationEventCount));
 		System.out.println("Fission:Fusion ratio = " + ((float) fissionEventCount / (float)fusionEventCount));
+		
+		
+		ResultsTable table = ResultsTable.getResultsTable();
+		table.incrementCounter();
+		
+		table.addValue("Fusion events", fusionEventCount);
+		table.addValue("Fission events", fissionEventCount);
+		table.addValue("Depolarisation events", depolarisationEventCount);
+		// table.addColumns();		
+		
+		table.show("MEL Results");
+		
+	
 
 		/*
 		 * // TEST CODE: Note the - 1, that is since background is removed, now label 1
@@ -278,7 +297,6 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 		long endTime = System.currentTimeMillis();
 		System.out.println("MEL - Total execution time: " + (endTime - startTime) + "ms");
-
 	}
 
 	public ImageInt getLabeledImage(ImagePlus imgPlus, int minStructureVolume) {
@@ -311,7 +329,6 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				// TODO: This line of code is very slow - consider multiplying a single label
 				// structure with the entire image in the other frame
 				Object3DVoxels intersection = labelVoxels_F1[label_F1].getIntersectionObject(labelVoxels_F2[label_F2]);
-				;
 
 				int volumeOverlap = 0;
 				if (intersection != null) // structures are not disjoint
