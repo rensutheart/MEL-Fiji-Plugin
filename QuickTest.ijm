@@ -94,16 +94,18 @@ for(f = 1; f <= (frames-1); f++)
 		//run("Merge Channels...", "c1=[MAX_Fission events] c2=[MAX_Fusion events] c3=[MAX_Depolarisation events]");
 		run("Merge Channels...", "c1=[Fission events] c2=[Fusion events] c3=[Depolarisation events]");
 	
-		
-		run("Calculator Plus", "i1=Frame1 i2=Frame1 operation=[Scale: i2 = i1 x k1 + k2] k1=0.5 k2=0 create");
-		run("RGB Color");
-		run("Calculator Plus", "i1=Result i2=RGB operation=[Add: i2 = (i1+i2) x k1 + k2] k1=1 k2=0 create");
-		rename("Output Time " + 0);
-		
 		fText = "" + f + ".tif";
 		if(f < 10)
 			fText = "0" + fText;
+
+		// save Events RGB image
+		save(outputPath + "Events" + fText);
+		run("Calculator Plus", "i1=Frame1 i2=Frame1 operation=[Scale: i2 = i1 x k1 + k2] k1=0.5 k2=0 create");
+		run("RGB Color");
+		run("Calculator Plus", "i1=Result i2=RGB operation=[Add: i2 = (i1+i2) x k1 + k2] k1=1 k2=0 create");
+		rename("Output Time " + fText);
 		
+		// save Events overlaid on Thresholded Frame 1
 		save(outputPath + fText);
 		
 		close("Result");

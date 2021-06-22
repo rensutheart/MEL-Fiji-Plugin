@@ -93,10 +93,10 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 	@Parameter(label = "Remove events that are withing some duplicate range", persist = false, required = false)
 	private boolean remove_duplicates = true;
-	
+
 	@Parameter(label = "Duplicate range", persist = false, required = false)
 	private float duplicate_range = 10;
-	
+
 	@Parameter(label = "Display full debug output in the console", persist = false, required = false)
 	private boolean debug_output;
 
@@ -227,7 +227,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //		showGraphNodesAsImage(matchedGraphs_onF2, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, false, "Unmatched graph");
 
 		// Find all the events F1 to F2 (fusion)
-		List<Vector3D> fusionEventLocations = findEvents(matchedGraphs_onF2, labelsSkeletonGraphs_F1, remove_duplicates, duplicate_range);
+		List<EventNode> fusionEventLocations = findEvents(matchedGraphs_onF2, labelsSkeletonGraphs_F1, remove_duplicates, duplicate_range, 0);
 		ImageInt fusionEventsImage = eventsToImage(fusionEventLocations, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, "Fusion events");
 
 		/*
@@ -242,7 +242,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //		showGraphNodesAsImage(matchedGraphs_onF1, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, false, "Unmatched graph");
 
 		// Find all the events F2 to F1 (fission)
-		List<Vector3D> fissionEventLocations = findEvents(matchedGraphs_onF1, labelsSkeletonGraphs_F2, remove_duplicates, duplicate_range);
+		List<EventNode> fissionEventLocations = findEvents(matchedGraphs_onF1, labelsSkeletonGraphs_F2, remove_duplicates, duplicate_range, 1);
 		ImageInt fissionEventsImage = eventsToImage(fissionEventLocations, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, "Fission events");
 
 		/*
@@ -254,7 +254,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// here, since for depolarisation I would err on the side of caution, and if
 		// there is a slight possibility that the even did join to another structure or
 		// moved, then I don't want to mark it
-		List<Vector3D> depolarisationEventLocations = findDepolarisationEvents(associatedLabelsBetweenFrames_F1toF2, labelVoxels_F1);
+		List<EventNode> depolarisationEventLocations = findDepolarisationEvents(associatedLabelsBetweenFrames_F1toF2, labelVoxels_F1);
 		ImageInt depolarisationEventsImage = eventsToImage(depolarisationEventLocations, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, "Depolarisation events");
 
 		int fusionEventCount = fusionEventLocations.size();
@@ -830,6 +830,60 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			return sameLocation(other.location);
 		}
 	};
+	
+	
+	class EventNode {
+		public Vector3D location;
+		public int firstLabel;
+		public int secondLabel;
+		public int eventType; // 0 = fusion, 1 = fission, 2 = depolarisation
+
+		public EventNode(Vector3D location, int label1, int label2, int eventType) {
+			this.location = location;
+			firstLabel = label1;
+			secondLabel = label2;
+			this.eventType = eventType;
+		}
+
+
+		public String toString() {
+			String typeText = "";
+			switch(this.eventType)
+			{
+			case 0: // fusion
+				typeText = "Fusion";
+				break;
+			case 1: // fission
+				typeText = "Fusion";
+				break;
+			case 2: // depolarisation
+				typeText = "Depolarisation";
+				break;
+			}
+			// +1 since background not included
+			return "Event Location: " + this.location + " First Label: " + (this.firstLabel + 1) + " Second Label: " + (this.secondLabel + 1) + " Type: "
+					+ typeText;
+		}
+
+		public boolean sameLocation(Vector3D other) {
+			// return location == other;
+			return Math.round(location.x) == Math.round(other.x) && Math.round(location.y) == Math.round(other.y) && Math.round(location.z) == Math.round(other.z);
+		}
+
+		public boolean sameLocation(EventNode other) {
+			return sameLocation(other.location);
+		}
+		
+		public double distance(EventNode other)
+		{
+			return location.distance(other.location);
+		}
+		
+		public void add(EventNode other)
+		{
+			location = location.add(other.location);
+		}
+	};
 
 	public GraphNode findDuplicateGraphNode(Graph<GraphNode, DefaultEdge> graph, Vector3D nodeLocation) {
 		for (GraphNode graphNode : graph.vertexSet()) {
@@ -1177,10 +1231,10 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 	// run along the graph until I find a transition between two labels and that is
 	// presumably the event location.
-	public List<Vector3D> findEvents(Graph<GraphNode, DefaultEdge> inputGraph, List<Graph<Vector3D, DefaultEdge>> labelsSkeletonGraphs, boolean removeDuplicates, float duplicateDistance) {
+	public List<EventNode> findEvents(Graph<GraphNode, DefaultEdge> inputGraph, List<Graph<Vector3D, DefaultEdge>> labelsSkeletonGraphs, boolean removeDuplicates, float duplicateDistance, int type) {
 		long startTime = System.currentTimeMillis();
 
-		List<Vector3D> eventList = new ArrayList<Vector3D>();
+		List<EventNode> eventList = new ArrayList<EventNode>();
 		Map<Integer, Vector3D> alreadyMatched = new HashMap<Integer, Vector3D>();
 
 		System.out.println("Input graph size: " + inputGraph.vertexSet().size());
@@ -1194,14 +1248,13 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				if (0 <= diff.x && diff.x <= 1 && 0 <= diff.y && diff.y <= 1 && 0 <= diff.z && diff.z <= 1) {
 					// .. and not the same voxel, AND is at a transition point
 					if (node1.relatedLabelInOtherFrame != node2.relatedLabelInOtherFrame) {
-
 						Vector3D eventLocation = getHalfwayPoint(node1.location, node2.location, true);
 
 						if (!eventList.contains(eventLocation)) {
-							eventList.add(eventLocation);
+							EventNode newNode = new EventNode(eventLocation, node1.relatedLabelInOtherFrame, node2.relatedLabelInOtherFrame, type);
+							eventList.add(newNode);
 							if (debug_output)
-								System.out.println("EVENT LOCATION " + eventLocation + " label 1 " + (node1.relatedLabelInOtherFrame + 1) + " label 2 " + (node2.relatedLabelInOtherFrame + 1)
-										+ " with diff " + diff.toString());
+								System.out.println("EVENT: " + newNode);
 						}
 					}
 				}
@@ -1209,12 +1262,12 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		}
 
 		if (removeDuplicates) {
-			List<Vector3D> duplicateRemovedEventList = new ArrayList<Vector3D>();
-			for (Vector3D vec : eventsToGraph(eventList, removeDuplicates, duplicateDistance).vertexSet()) {
+			List<EventNode> duplicateRemovedEventList = new ArrayList<EventNode>();
+			for (EventNode vec : eventsToGraph(eventList, removeDuplicates, duplicateDistance).vertexSet()) {
 				duplicateRemovedEventList.add(vec);
 			}
 			eventList = duplicateRemovedEventList;
-			
+
 			// TODO: Remove this code, since it has been included in eventsToGraph()
 //			// find all the events that are nearby each other based on diplicateDistance
 //			List<List<Vector3D>> nearbyEventsList = new ArrayList<List<Vector3D>>(eventList.size());
@@ -1294,10 +1347,10 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		return halfwayPoint;
 	}
 
-	public List<Vector3D> findDepolarisationEvents(List<List<Integer>> associatedLabelsBetweenFrames, Object3DVoxels[] labeledVoxels) {
+	public List<EventNode> findDepolarisationEvents(List<List<Integer>> associatedLabelsBetweenFrames, Object3DVoxels[] labeledVoxels) {
 		long startTime = System.currentTimeMillis();
 
-		List<Vector3D> eventList = new ArrayList<Vector3D>();
+		List<EventNode> eventList = new ArrayList<EventNode>();
 
 		for (int i = 0; i < associatedLabelsBetweenFrames.size(); ++i) {
 			if (associatedLabelsBetweenFrames.get(i).size() == 0) {
@@ -1310,7 +1363,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				centerPoint.z = Math.round(centerPoint.z);
 				Vector3D centerVector = new Vector3D(centerPoint);
 //				Voxel3D centerVoxel = new Voxel3D(centerPoint, (i + 1));
-				eventList.add(centerVector);
+				eventList.add(new EventNode(centerVector, i, i, 2));
 			}
 		}
 
@@ -1320,17 +1373,17 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		return eventList;
 	}
 
-	public Graph<Vector3D, DefaultEdge> eventsToGraph(List<Vector3D> eventsList, boolean removeDuplicates, float duplicateDistance) {
-		Graph<Vector3D, DefaultEdge> eventsGraph = new DefaultUndirectedGraph<>(DefaultEdge.class);
+	public Graph<EventNode, DefaultEdge> eventsToGraph(List<EventNode> eventsList, boolean removeDuplicates, float duplicateDistance) {
+		Graph<EventNode, DefaultEdge> eventsGraph = new DefaultUndirectedGraph<>(DefaultEdge.class);
 
 		// add all vertices to graph
-		for (Vector3D eventLoc : eventsList) {
+		for (EventNode eventLoc : eventsList) {
 			eventsGraph.addVertex(eventLoc);
 		}
 
 		// connect graph vertices
-		for (Vector3D eventLocA : eventsGraph.vertexSet()) {
-			for (Vector3D eventLocB : eventsGraph.vertexSet()) {
+		for (EventNode eventLocA : eventsGraph.vertexSet()) {
+			for (EventNode eventLocB : eventsGraph.vertexSet()) {
 				if (0 <= eventLocA.distance(eventLocB) && eventLocA.distance(eventLocB) <= duplicateDistance) {
 					eventsGraph.addEdge(eventLocA, eventLocB);
 				}
@@ -1341,23 +1394,23 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			boolean didRemove = false;
 			do {
 				didRemove = false;
-				for (Vector3D eventLocA : eventsGraph.vertexSet()) {
+				for (EventNode eventLocA : eventsGraph.vertexSet()) {
 					if (eventsGraph.edgesOf(eventLocA).size() > 0) {
 						didRemove = true;
 
-						List<Vector3D> toRemove = new ArrayList<Vector3D>();
-						Iterator<Vector3D> iterator = new DepthFirstIterator<>(eventsGraph, eventLocA);
+						List<EventNode> toRemove = new ArrayList<EventNode>();
+						Iterator<EventNode> iterator = new DepthFirstIterator<>(eventsGraph, eventLocA);
 						while (iterator.hasNext()) {
 							toRemove.add(iterator.next());
 						}
-						Vector3D averageEventLocation = toRemove.get(0);
+						Vector3D averageEventLocation = toRemove.get(0).location;
 						eventsGraph.removeVertex(toRemove.get(0));
 						if (debug_output)
 							System.out.println("REMOVED duplicate " + toRemove.get(0));
 						int count;
 						for (count = 1; count < toRemove.size(); count++) {
-							Vector3D removeVertex = toRemove.get(count);
-							averageEventLocation = averageEventLocation.add(removeVertex);
+							EventNode removeVertex = toRemove.get(count);
+							averageEventLocation = averageEventLocation.add(removeVertex.location);
 
 							eventsGraph.removeVertex(removeVertex);
 							if (debug_output)
@@ -1368,8 +1421,9 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 						averageEventLocation.x = Math.round(averageEventLocation.x);
 						averageEventLocation.y = Math.round(averageEventLocation.y);
 						averageEventLocation.z = Math.round(averageEventLocation.z);
+						eventLocA.location = averageEventLocation;
 
-						eventsGraph.addVertex(averageEventLocation);
+						eventsGraph.addVertex(eventLocA);
 						if (debug_output)
 							System.out.println("ADDED AVERAGE of duplicates " + averageEventLocation);
 						break; // since my loop is no longer valid with vertices added and removed
@@ -1400,13 +1454,14 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		return eventList;
 	}
 
-	public ImageInt eventsToImage(List<Vector3D> eventList, int width, int height, int nSlices, String title) {
+	public ImageInt eventsToImage(List<EventNode> eventList, int width, int height, int nSlices, String title) {
 		ImagePlus graphImage = NewImage.createImage("Graph Image", width, height, nSlices, 16, NewImage.FILL_BLACK);
 
 		ImageInt image = ImageInt.wrap(graphImage);
 
-		for (Vector3D eL : eventList) {
-			image.setPixel((int) eL.x, (int) eL.y, (int) eL.z, 1);
+		for (EventNode eL : eventList) {
+			Vector3D eLVector = eL.location;
+			image.setPixel((int) eLVector.x, (int) eLVector.y, (int) eLVector.z, 1);
 		}
 
 		image.show(title);
