@@ -90,6 +90,13 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 	@Parameter(label = "For a structure that moved, what volume similarity must it have to be considered a match (as 0-1)", required = false)
 	private float depolarisation_volume_similarity_threshold = 0.2f; // this is a percentage: 0 means that they must be exactly the same, 0.2 means
 																		// that the other structure may be 20% larger or smaller
+
+	@Parameter(label = "Remove events that are withing some duplicate range", persist = false, required = false)
+	private boolean remove_duplicates = true;
+	
+	@Parameter(label = "Duplicate range", persist = false, required = false)
+	private float duplicate_range = 10;
+	
 	@Parameter(label = "Display full debug output in the console", persist = false, required = false)
 	private boolean debug_output;
 
@@ -220,7 +227,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //		showGraphNodesAsImage(matchedGraphs_onF2, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, false, "Unmatched graph");
 
 		// Find all the events F1 to F2 (fusion)
-		List<Vector3D> fusionEventLocations = findEvents(matchedGraphs_onF2, labelsSkeletonGraphs_F1, true, 10);
+		List<Vector3D> fusionEventLocations = findEvents(matchedGraphs_onF2, labelsSkeletonGraphs_F1, remove_duplicates, duplicate_range);
 		ImageInt fusionEventsImage = eventsToImage(fusionEventLocations, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, "Fusion events");
 
 		/*
@@ -235,7 +242,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //		showGraphNodesAsImage(matchedGraphs_onF1, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, false, "Unmatched graph");
 
 		// Find all the events F2 to F1 (fission)
-		List<Vector3D> fissionEventLocations = findEvents(matchedGraphs_onF1, labelsSkeletonGraphs_F2, true, 10);
+		List<Vector3D> fissionEventLocations = findEvents(matchedGraphs_onF1, labelsSkeletonGraphs_F2, remove_duplicates, duplicate_range);
 		ImageInt fissionEventsImage = eventsToImage(fissionEventLocations, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, "Fission events");
 
 		/*
@@ -1201,13 +1208,15 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			}
 		}
 
-		// TODO: Currently no duplicates are removed
 		if (removeDuplicates) {
 			List<Vector3D> duplicateRemovedEventList = new ArrayList<Vector3D>();
 			for (Vector3D vec : eventsToGraph(eventList, removeDuplicates, duplicateDistance).vertexSet()) {
 				duplicateRemovedEventList.add(vec);
 			}
 			eventList = duplicateRemovedEventList;
+			
+			// TODO: Remove this code, since it has been included in eventsToGraph()
+//			// find all the events that are nearby each other based on diplicateDistance
 //			List<List<Vector3D>> nearbyEventsList = new ArrayList<List<Vector3D>>(eventList.size());
 //			for (Vector3D eventLocation : eventList) {
 //				List<Vector3D> nearbyEvents = new ArrayList<Vector3D>();
@@ -1222,7 +1231,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //			}
 //
 //			for (int i = 0; i < nearbyEventsList.size(); i++) {
-//				if(debugOutput) System.out.println(i);
+//				if(debug_output) System.out.println(i);
 //				List<Vector3D> nearbyEvents = nearbyEventsList.get(i);
 //				if (nearbyEvents.size() > 1) { // since normal event also included
 //					Vector3D averageEventLocation = nearbyEvents.get(0);
@@ -1239,7 +1248,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //
 //					eventList.add(averageEventLocation);
 //
-//					if(debugOutput) System.out.println("ADDED AVERAGE " + averageEventLocation);
+//					if(debug_output) System.out.println("ADDED AVERAGE " + averageEventLocation);
 //				}
 //			}
 		}
@@ -1322,7 +1331,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// connect graph vertices
 		for (Vector3D eventLocA : eventsGraph.vertexSet()) {
 			for (Vector3D eventLocB : eventsGraph.vertexSet()) {
-				if (eventLocA.distance(eventLocB) <= duplicateDistance) {
+				if (0 <= eventLocA.distance(eventLocB) && eventLocA.distance(eventLocB) <= duplicateDistance) {
 					eventsGraph.addEdge(eventLocA, eventLocB);
 				}
 			}

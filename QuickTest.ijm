@@ -28,7 +28,10 @@ for(f = 1; f <= (frames-1); f++)
 	run("Make Substack...", "slices=1-" + slices +"  frames=" + (f+1));
 	rename("Frame2");
 	
-	run("MEL Process", "frame_1_title=Frame1 frame_2_title=Frame2  min_structure_volume=5 min_overlap_percentage=0.5 skeleton_distance_threshold=20 depolarisation_range_threshold=50 depolarisation_volume_similarity_threshold=0.5 debug_output=false"); 
+	run("MEL Process", "frame_1_title=Frame1 frame_2_title=Frame2  "+
+	"min_structure_volume=5 min_overlap_percentage=0.5 skeleton_distance_threshold=20 "+
+	"depolarisation_range_threshold=50 depolarisation_volume_similarity_threshold=0.5"+
+	" remove_duplicates=true duplicate_range=10 debug_output=false"); 
 	
 		
 	
@@ -151,6 +154,9 @@ for(f = 1; f <= (frames-1); f++)
 	selectWindow("Timelapse");
 	close("\\Others");
 }
+
+selectWindow("MEL Results"); 
+saveAs("Results", outputPath + "MEL Results.csv");
 
 
 
