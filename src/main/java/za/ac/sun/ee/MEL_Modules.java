@@ -67,19 +67,19 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //	@Parameter
 //	private OpService opService;
 
-	//@Parameter(label = "The minimum volume of the thresholded structures", required = false)
+	@Parameter(label = "The minimum volume of the thresholded structures (voxels)", required = false)
 	private int min_structure_volume = 5;  // TODO: This can be dependent on Voxel size (see Mitochondrial Analyzer macro)
 
-	//@Parameter
+	@Parameter(label = "The minimum percentage of volume overlap to be considered a match (as 0-1)", required = false)
 	private float min_overlap_percentage = 0.1f;
 
-	//@Parameter
+	@Parameter(label = "The distance threholds between the skeletons in two frames to be considered a match (pixels)", required = false)
 	private float skeleton_distance_threshold = 20;
 
-	//@Parameter
+	@Parameter(label = "The distance a structure can move before being considered as depolarised (pixels)", required = false)
 	private float depolarisation_range_threshold = 50;
 
-	//@Parameter
+	@Parameter(label = "For a structure that moved, what volume similarity must it have to be considered a match (as 0-1)", required = false)
 	private float depolarisation_volume_similarity_threshold = 0.2f; // this is a percentage: 0 means that they must be exactly the same, 0.2 means
 																	// that the other structure may be 20% larger or smaller
 
