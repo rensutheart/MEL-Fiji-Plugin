@@ -328,7 +328,19 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 		// NOTES: This excludes background if labelImageTo3DVoxelArray() was called with
 		// a start label of 1
+		boolean printProgress = true;
+
 		for (int label_F1 = 0; label_F1 < numLabels_F1; ++label_F1) {
+			// display progress of function (since it is quite slow)
+			float percentDone = (float) label_F1 / numLabels_F1 * 100;
+			if ((int) percentDone % 5 == 0) {
+				if (printProgress)
+					System.out.println(String.format("%.1f%%", percentDone));
+				printProgress = false;
+			} else {
+				printProgress = true;
+			}
+
 			for (int label_F2 = 0; label_F2 < numLabels_F2; ++label_F2) {
 				// TODO: This line of code is very slow - consider multiplying a single label
 				// structure with the entire image in the other frame
@@ -1175,15 +1187,14 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				if (0 <= diff.x && diff.x <= 1 && 0 <= diff.y && diff.y <= 1 && 0 <= diff.z && diff.z <= 1) {
 					// .. and not the same voxel, AND is at a transition point
 					if (node1.relatedLabelInOtherFrame != node2.relatedLabelInOtherFrame) {
-						System.out.println("EVENT");
 
 						Vector3D eventLocation = getHalfwayPoint(node1.location, node2.location, true);
 
 						if (!eventList.contains(eventLocation)) {
 							eventList.add(eventLocation);
-							// if (debug_output)
-							System.out.println("EVENT LOCATION " + eventLocation + " label 1 " + (node1.relatedLabelInOtherFrame + 1) + " label 2 " + (node2.relatedLabelInOtherFrame + 1)
-									+ " with diff " + diff.toString());
+							if (debug_output)
+								System.out.println("EVENT LOCATION " + eventLocation + " label 1 " + (node1.relatedLabelInOtherFrame + 1) + " label 2 " + (node2.relatedLabelInOtherFrame + 1)
+										+ " with diff " + diff.toString());
 						}
 					}
 				}
