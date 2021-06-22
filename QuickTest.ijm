@@ -18,7 +18,7 @@ if(channels > 1)
 print(frames + " frames detected");
 print(slices + " slices detected");
 
-for(var f = 1; f <= frames; f++)
+for(f = 1; f <= (frames-1); f++)
 {	
 	// extract fames from timelapse
 	run("Make Substack...", "slices=1-" + slices +" frames=" + f);
@@ -28,7 +28,7 @@ for(var f = 1; f <= frames; f++)
 	run("Make Substack...", "slices=1-" + slices +"  frames=" + (f+1));
 	rename("Frame2");
 	
-	run("MEL Process", "frame_1_title=Frame1 frame_2_title=Frame2  min_structure_volume=5 min_overlap_percentage=0.1 skeleton_distance_threshold=20 depolarisation_range_threshold=50 depolarisation_volume_similarity_threshold=0.2 debug_output=false"); 
+	run("MEL Process", "frame_1_title=Frame1 frame_2_title=Frame2  min_structure_volume=5 min_overlap_percentage=0.5 skeleton_distance_threshold=20 depolarisation_range_threshold=50 depolarisation_volume_similarity_threshold=0.5 debug_output=false"); 
 	
 		
 	
@@ -97,11 +97,11 @@ for(var f = 1; f <= frames; f++)
 		run("Calculator Plus", "i1=Result i2=RGB operation=[Add: i2 = (i1+i2) x k1 + k2] k1=1 k2=0 create");
 		rename("Output Time " + 0);
 		
-		var fText = f + "";
+		fText = "" + f + ".tif";
 		if(f < 10)
-			fText = "0" + f;
+			fText = "0" + fText;
 		
-		save(outputPath + fText + ".tif");
+		save(outputPath + fText);
 		
 		close("Result");
 	}
