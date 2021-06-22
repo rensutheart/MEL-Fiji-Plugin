@@ -57,7 +57,7 @@ import java.util.Set;
 
 //, attrs = {@Attr(name = "no-legacy") }
 @Plugin(type = Command.class, name = "MEL", description = "Automatically calculate the mitochondrial fission, fusion and depolarisation event locations ", menuPath = "Plugins>MEL Process", headless = false)
-public class MEL_Modules<T extends RealType<T>> implements Command { 
+public class MEL_Modules<T extends RealType<T>> implements Command {
 //	@Parameter
 //	private Dataset currentData;
 //
@@ -67,8 +67,16 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //	@Parameter
 //	private OpService opService;
 
+	// the "required = false" part is so that I can run it automatically through a
+	// macro using the run() function without seeing a dialog box
+	@Parameter(label = "The window title of Frame 1", required = false)
+	private String frame_1_title = "";
+
+	@Parameter(label = "The window title of Frame 2", required = false)
+	private String frame_2_title = "";
+
 	@Parameter(label = "The minimum volume of the thresholded structures (voxels)", required = false)
-	private int min_structure_volume = 5;  // TODO: This can be dependent on Voxel size (see Mitochondrial Analyzer macro)
+	private int min_structure_volume = 5; // TODO: This can be dependent on Voxel size (see Mitochondrial Analyzer macro)
 
 	@Parameter(label = "The minimum percentage of volume overlap to be considered a match (as 0-1)", required = false)
 	private float min_overlap_percentage = 0.1f;
@@ -81,32 +89,30 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 	@Parameter(label = "For a structure that moved, what volume similarity must it have to be considered a match (as 0-1)", required = false)
 	private float depolarisation_volume_similarity_threshold = 0.2f; // this is a percentage: 0 means that they must be exactly the same, 0.2 means
-																	// that the other structure may be 20% larger or smaller
-
+																		// that the other structure may be 20% larger or smaller
 	@Parameter(label = "Display full debug output in the console", persist = false, required = false)
-	private boolean debug_output;	
-    
+	private boolean debug_output;
 
 	@Override
 	public void run() {
-        System.out.println(debug_output);
-        
-		
 		long startTime = System.currentTimeMillis();
 		// I'm assuming the input images are Pre-processed and thresholded.
 
 		/*
 		 * LOAD THRESHOLDED FRAMES
 		 */
-		String[] imageTitles = WindowManager.getImageTitles();
-		for (String imgTitle : imageTitles) {
-			System.out.println(imgTitle);
-		}
-		String title_Frame1 = imageTitles[0];// "Frame1_Thresholded.tif";
-		String title_Frame2 = imageTitles[1];// "Frame2_Thresholded.tif";
+//		String[] imageTitles = WindowManager.getImageTitles();
+//		for (String imgTitle : imageTitles) {
+//			System.out.println(imgTitle);
+//		}
+//		String title_Frame1 = imageTitles[0];// "Frame1_Thresholded.tif";
+//		String title_Frame2 = imageTitles[1];// "Frame2_Thresholded.tif";
+//
+//		ImagePlus imagePlus_Frame1 = WindowManager.getImage(title_Frame1);
+//		ImagePlus imagePlus_Frame2 = WindowManager.getImage(title_Frame2);
 
-		ImagePlus imagePlus_Frame1 = WindowManager.getImage(title_Frame1);
-		ImagePlus imagePlus_Frame2 = WindowManager.getImage(title_Frame2);
+		ImagePlus imagePlus_Frame1 = WindowManager.getImage(frame_1_title);
+		ImagePlus imagePlus_Frame2 = WindowManager.getImage(frame_2_title);
 
 		// convert from whatever bit depth and format to 8-bit for further processing
 		imagePlus_Frame1.setProcessor(imagePlus_Frame1.getProcessor().convertToByteProcessor());
@@ -932,10 +938,9 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 					// || existingNode in Frame 2 has no related structure in Frame 1)
 					if (distanceBetweenNodes != -1 && (distanceBetweenNodes < existingNode.distanceToRelated || existingNode.distanceToRelated == -1)) {
 						// This if statement prevents certain existing labels to be completely removed
-						// since some other label is always closer
-						// if, however, it has been detected before in some other location and that
-						// detected distance was smaller, now you may happily
-						// replace it in this location
+						// since some other label is always closer if, however, it has been detected
+						// before in some other location and that detected distance was smaller, now you
+						// may happily replace it in this location
 						float existingMinDistance = existingMatchedMinDistance.containsKey(existingNode.relatedLabelInOtherFrame)
 								? existingMatchedMinDistance.get(existingNode.relatedLabelInOtherFrame)
 								: Float.POSITIVE_INFINITY;
@@ -1159,29 +1164,33 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		List<Vector3D> eventList = new ArrayList<Vector3D>();
 		Map<Integer, Vector3D> alreadyMatched = new HashMap<Integer, Vector3D>();
 
+		System.out.println("Input graph size: " + inputGraph.vertexSet().size());
+
 		// loop through each node/voxel combination
 		for (GraphNode node1 : inputGraph.vertexSet()) {
 			for (GraphNode node2 : inputGraph.vertexSet()) {
 				// calculate the vector between the two nodes
 				Vector3D diff = new Vector3D(Math.abs(node1.location.x - node2.location.x), Math.abs(node1.location.y - node2.location.y), Math.abs(node1.location.z - node2.location.z));
-
 				// the two voxels are neighbouring
 				if (0 <= diff.x && diff.x <= 1 && 0 <= diff.y && diff.y <= 1 && 0 <= diff.z && diff.z <= 1) {
 					// .. and not the same voxel, AND is at a transition point
 					if (node1.relatedLabelInOtherFrame != node2.relatedLabelInOtherFrame) {
+						System.out.println("EVENT");
+
 						Vector3D eventLocation = getHalfwayPoint(node1.location, node2.location, true);
 
 						if (!eventList.contains(eventLocation)) {
 							eventList.add(eventLocation);
-							if (debug_output)
-								System.out.println("EVENT LOCATION " + eventLocation + " label 1 " + (node1.relatedLabelInOtherFrame + 1) + " label 2 " + (node2.relatedLabelInOtherFrame + 1)
-										+ " with diff " + diff.toString());
+							// if (debug_output)
+							System.out.println("EVENT LOCATION " + eventLocation + " label 1 " + (node1.relatedLabelInOtherFrame + 1) + " label 2 " + (node2.relatedLabelInOtherFrame + 1)
+									+ " with diff " + diff.toString());
 						}
 					}
 				}
 			}
 		}
 
+		// TODO: Currently no duplicates are removed
 		if (removeDuplicates) {
 			List<Vector3D> duplicateRemovedEventList = new ArrayList<Vector3D>();
 			for (Vector3D vec : eventsToGraph(eventList, removeDuplicates, duplicateDistance).vertexSet()) {
