@@ -55,7 +55,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-//, attrs = {@Attr(name = "no-legacy") }
 @Plugin(type = Command.class, name = "MEL", description = "Automatically calculate the mitochondrial fission, fusion and depolarisation event locations ", menuPath = "Plugins>MEL Process", headless = false)
 public class MEL_Modules<T extends RealType<T>> implements Command {
 //	@Parameter
@@ -274,38 +273,6 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 		table.show("MEL Results");
 
-		/*
-		 * // TEST CODE: Note the - 1, that is since background is removed, now label 1
-		 * is // at index 0. int label_F1_from = 40; int label_F1_to =
-		 * associatedLabelsWithinFrame_F1.get(label_F1_from - 1).get(0) + 1;
-		 * 
-		 * if(debugOutput) System.out.println("Structures associated within with label "
-		 * + label_F1_from); for (int label_to :
-		 * associatedLabelsWithinFrame_F1.get(label_F1_from - 1)) { if(debugOutput)
-		 * System.out.println(label_to + 1); }
-		 * 
-		 * if(debugOutput) System.out.println("Finding 5 closest points between label "
-		 * + label_F1_from + " and " + label_F1_to); // IMPORTANT NOTE: labelsSkeletons
-		 * matches the Label image and therefore // includes the background, hence no -1
-		 * for label number List<VectorPair> closestVectorPair =
-		 * getClosestPointsBetweenStructures(labelsSkeletons_F1.get(label_F1_from),
-		 * labelsSkeletons_F1.get(label_F1_to), 5);
-		 */
-
-//		Img<UnsignedIntType> skeletonImg_Frame1 = ImageJFunctions.wrap(WindowManager.getImage(title_Frame1));
-//		Img<UnsignedIntType> skeletonImg_Frame2 = ImageJFunctions.wrap(WindowManager.getImage(title_Frame2));
-
-//		IJ.run(skeleton_F1, "Analyze Skeleton (2D/3D)", "prune=[none] calculate show");
-		// Capture results
-
-		// TODO: Find a way to match the skeleton to the labeled structure:
-		// Option 1: Calculate the skeletonization many times (once for each structure)
-		// Option 2: Sample the value of a single skeleton point to determine the label
-		// value
-		// Option 3: multiply binarized skeleton with label image, and then extract
-		// labels of skeleton?
-
-//		WindowManager.closeAllWindows();
 
 		long endTime = System.currentTimeMillis();
 		System.out.println("MEL - Total execution time: " + (endTime - startTime) + "ms");
@@ -652,17 +619,6 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// images, use .duplicate()
 		IJ.run(skeleton, "Skeletonize (2D/3D)", null);
 
-		// IMPLEMENTATION 1
-		// NOTE PROBLEM: I don't know how to take the result of Calculator plus and use
-		// it int the plugin
-//		ImageHandler skeletonBinary = ImageHandler.wrap(skeleton);		
-//		skeletonBinary.show("Skeleton_Binary");		
-//		labeledImage.show("Labeled_Image");
-//		ImagePlus labeledSkeleton = null;
-//		IJ.run("Calculator Plus", "i1=Skeleton_Binary i2=Labeled_Image operation=[Multiply: i2 = (i1*i2) x k1 + k2] k1="+skeletonBinary.getMax()+" k2=0 create");
-//		IJ.selectWindow("Result");
-
-		// IMPLEMENTATION 2 (reasonably fast)
 		ImageInt labeledSkeletonImage = ImageInt.wrap(skeleton);
 		ImagePlus labeledSkeletonImagePlus = labeledSkeletonImage.multiplyImage(labeledImage, (float) (1.0f / labeledSkeletonImage.getMax())).getImagePlus();
 //		labeledSkeletonImagePlus.show(); 
@@ -671,8 +627,6 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// fix...(TODO)
 		labeledSkeletonImage = ImageInt.wrap(labeledSkeletonImagePlus);
 		labeledSkeletonImage.multiplyByValue((float) (labeledImage.getMax() + 1) / 65536.0f);
-		// labeledSkeletonImage.multiplyByValue((float)
-		// (labeledImage.getMax()/labeledSkeletonImage.getMax()));
 		labeledSkeletonImage.show(title + " - small structures might be missing");
 
 		labelsSkeletons = Arrays.asList(labelImageTo3DVoxelArray(labeledSkeletonImage, 1));
@@ -701,12 +655,6 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				System.out.println(
 						"Label " + (i + 1) + " skeleton size " + labelsSkeletons.get(i).getVoxels().size() + " label volume " + (new Object3DVoxels(labeledImage, (i + 1)).getVoxels().size()));
 		}
-
-		// IMPLEMENTATION 3 (quite slow)
-//		Object3DVoxels skeletonVoxels = new Object3DVoxels(ImageHandler.wrap(skeleton));
-//		for (int i = 0; i < labelVoxels.length; ++i) {
-//			labelsSkeletons.set(i, skeletonVoxels.getIntersectionObject(labelVoxels[i]));
-//		}
 
 		long endTime = System.currentTimeMillis();
 		System.out.println("labelsToSkeleton() - Total execution time: " + (endTime - startTime) + "ms");
@@ -1228,20 +1176,6 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		}
 
 		ih.show(title);
-
-//		
-//		ImageProcessor graphImageProc = graphImage.getProcessor();
-//		
-//		for(GraphNode node: inputGraph.vertexSet())
-//		{
-//			Vector3D v = node.location;
-//			graphImageProc.setSliceNumber((int) v.z);
-//			graphImageProc.putPixel((int)v.x, (int)v.y, node.relatedLabelInOtherFrame);
-//		}
-//		
-//		graphImage.setProcessor(graphImageProc);
-//		graphImage.show();
-
 	}
 
 	// run along the graph until I find a transition between two labels and that is
@@ -1283,42 +1217,6 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			}
 			eventList = duplicateRemovedEventList;
 
-			// TODO: Remove this code, since it has been included in eventsToGraph()
-//			// find all the events that are nearby each other based on diplicateDistance
-//			List<List<Vector3D>> nearbyEventsList = new ArrayList<List<Vector3D>>(eventList.size());
-//			for (Vector3D eventLocation : eventList) {
-//				List<Vector3D> nearbyEvents = new ArrayList<Vector3D>();
-//				for (Vector3D otherEventLocaiton : eventList) {
-//					double dist = eventLocation.distance(otherEventLocaiton);
-//					if (0 < dist && dist <= duplicateDistance) {
-//						nearbyEvents.add(otherEventLocaiton);
-//					}
-//				}
-//				nearbyEvents.add(eventLocation); // include same event as well (but only once)
-//				nearbyEventsList.add(nearbyEvents);
-//			}
-//
-//			for (int i = 0; i < nearbyEventsList.size(); i++) {
-//				if(debug_output) System.out.println(i);
-//				List<Vector3D> nearbyEvents = nearbyEventsList.get(i);
-//				if (nearbyEvents.size() > 1) { // since normal event also included
-//					Vector3D averageEventLocation = nearbyEvents.get(0);
-//					eventList = removeEventLocation(eventList, nearbyEvents.get(0));
-//					for (int j = 1; j < nearbyEvents.size(); j++) {
-//						averageEventLocation = averageEventLocation.add(nearbyEvents.get(j));
-//						eventList = removeEventLocation(eventList, nearbyEvents.get(j));
-//					}
-//
-//					averageEventLocation = averageEventLocation.multiply(1.0 / nearbyEvents.size());
-//					averageEventLocation.x = Math.round(averageEventLocation.x);
-//					averageEventLocation.y = Math.round(averageEventLocation.y);
-//					averageEventLocation.z = Math.round(averageEventLocation.z);
-//
-//					eventList.add(averageEventLocation);
-//
-//					if(debug_output) System.out.println("ADDED AVERAGE " + averageEventLocation);
-//				}
-//			}
 		}
 
 		long endTime = System.currentTimeMillis();
