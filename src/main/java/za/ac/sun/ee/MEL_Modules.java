@@ -157,10 +157,11 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		int[] numVoxelsInStructures_F1 = getNumVoxelsInStructures(labelVoxels_F1);
 		int[] numVoxelsInStructures_F2 = getNumVoxelsInStructures(labelVoxels_F2);
 
-		List<List<Integer>> associatedLabelsBetweenFrames_F1toF2 = getAssociatedLabelsBetweenFrames(overlappingVolumes, centerOfStructures_F1, numVoxelsInStructures_F1, centerOfStructures_F2,
-				numVoxelsInStructures_F2, depolarisation_range_threshold, depolarisation_volume_similarity_threshold);
-		List<List<Integer>> associatedLabelsBetweenFrames_F2toF1 = getAssociatedLabelsBetweenFrames(transposeMatrix(overlappingVolumes), centerOfStructures_F2, numVoxelsInStructures_F2,
-				centerOfStructures_F1, numVoxelsInStructures_F1, depolarisation_range_threshold, depolarisation_volume_similarity_threshold);
+		List<List<Integer>> associatedLabelsBetweenFrames_F1toF2 = getAssociatedLabelsBetweenFrames(overlappingVolumes);
+		List<List<Integer>> associatedLabelsBetweenFrames_F2toF1 = getAssociatedLabelsBetweenFrames(transposeMatrix(overlappingVolumes));
+
+		List<List<Integer>> associatedLabelsBetweenFrames_F1toF2_withDep = addRoughDepolarisationMatch(associatedLabelsBetweenFrames_F1toF2, associatedLabelsBetweenFrames_F2toF1,
+				centerOfStructures_F1, numVoxelsInStructures_F1, centerOfStructures_F2, numVoxelsInStructures_F2, depolarisation_range_threshold, depolarisation_volume_similarity_threshold);
 
 		// I don't seem to need this anymore for the new approach
 //		List<List<Integer>> associatedLabelsWithinFrame_F1 = getAssociatedLabelsWithinFrame(associatedLabelsBetweenFrames_F1toF2, associatedLabelsBetweenFrames_F2toF1);
@@ -254,7 +255,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// here, since for depolarisation I would err on the side of caution, and if
 		// there is a slight possibility that the even did join to another structure or
 		// moved, then I don't want to mark it
-		List<EventNode> depolarisationEventLocations = findDepolarisationEvents(associatedLabelsBetweenFrames_F1toF2, labelVoxels_F1);
+		List<EventNode> depolarisationEventLocations = findDepolarisationEvents(associatedLabelsBetweenFrames_F1toF2_withDep, labelVoxels_F1);
 		ImageInt depolarisationEventsImage = eventsToImage(depolarisationEventLocations, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, "Depolarisation events");
 
 		int fusionEventCount = fusionEventLocations.size();
@@ -410,8 +411,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		return labelImageTo3DVoxelArray(labeledImage, 0);
 	}
 
-	public List<List<Integer>> getAssociatedLabelsBetweenFrames(int[][] overlappingVolumes, Point3D[] centerOfStructures_F1, int[] numVoxelsInStructures_F1, Point3D[] centerOfStructures_F2,
-			int[] numVoxelsInStructures_F2, float depolarisationRange, float depolarisationVolumeSimilarity) {
+	public List<List<Integer>> getAssociatedLabelsBetweenFrames(int[][] overlappingVolumes) {
 		long startTime = System.currentTimeMillis();
 
 		List<List<Integer>> associatedLabelsBetweenFrames = new ArrayList<List<Integer>>(overlappingVolumes.length);
@@ -429,10 +429,28 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				}
 			}
 
-			/*
-			 * This section tries to find "Close" structures of similar volume, before
-			 * allowing something to be considered as depolarisation
-			 */
+			associatedLabelsBetweenFrames.add(tempList);
+		}
+
+		long endTime = System.currentTimeMillis();
+		System.out.println("getAssociatedLabelsBetweenFrames() - Total execution time: " + (endTime - startTime) + "ms");
+
+		return associatedLabelsBetweenFrames;
+	}
+
+	public List<List<Integer>> addRoughDepolarisationMatch(List<List<Integer>> associatedLabelsBetweenFrames_F1_to_F2, List<List<Integer>> associatedLabelsBetweenFrames_F2_to_F1,
+			Point3D[] centerOfStructures_F1, int[] numVoxelsInStructures_F1, Point3D[] centerOfStructures_F2, int[] numVoxelsInStructures_F2, float depolarisationRange,
+			float depolarisationVolumeSimilarity) {
+		List<List<Integer>> associatedLabelsBetweenFrames_F1_to_F2_withDep = new ArrayList<List<Integer>>(associatedLabelsBetweenFrames_F1_to_F2.size());
+
+		/*
+		 * This section tries to find "Close" structures of similar volume, before
+		 * allowing something to be considered as depolarisation
+		 */
+		// AFTER the associated labels are found, look at those that had none for
+		// possible "false positive depolarisation"
+		for (int i = 0; i < associatedLabelsBetweenFrames_F1_to_F2.size(); i++) {
+			List<Integer> tempList = associatedLabelsBetweenFrames_F1_to_F2.get(i);
 			// there were no associated labels (depolarized? from Frame 1 to Frame 2, or
 			// appeared from Frame 1 to Frame 2 when this function is called with the
 			// transpose)
@@ -447,6 +465,11 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				// loop through the structures in the other frame and try to find the closest
 				// structure close to the current center that is also similar volume
 				for (int j = 0; j < centerOfStructures_F2.length; j++) {
+					// only add if there is a structure in the other frame also has no associated structures
+					if (associatedLabelsBetweenFrames_F2_to_F1.get(j).size() != 0)
+						continue;
+						
+
 					double newDistance = centerCurrent.distance(centerOfStructures_F2[j]);
 					if (newDistance < depolarisationRange) {
 						double newVoxelRange = Math.abs(numVoxelsCurrent / numVoxelsInStructures_F2[j] - 1);
@@ -474,14 +497,12 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 						System.out.println("... SAVED Associated between " + (i + 1) + " and " + (F2_index + 1));
 				}
 			}
+			
+			associatedLabelsBetweenFrames_F1_to_F2_withDep.add(tempList);
 
-			associatedLabelsBetweenFrames.add(tempList);
 		}
 
-		long endTime = System.currentTimeMillis();
-		System.out.println("getAssociatedLabelsBetweenFrames() - Total execution time: " + (endTime - startTime) + "ms");
-
-		return associatedLabelsBetweenFrames;
+		return associatedLabelsBetweenFrames_F1_to_F2_withDep;
 	}
 
 	// https://stackoverflow.com/questions/26197466/transposing-a-matrix-from-a-2d-array
@@ -830,8 +851,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			return sameLocation(other.location);
 		}
 	};
-	
-	
+
 	class EventNode {
 		public Vector3D location;
 		public int firstLabel;
@@ -845,11 +865,9 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			this.eventType = eventType;
 		}
 
-
 		public String toString() {
 			String typeText = "";
-			switch(this.eventType)
-			{
+			switch (this.eventType) {
 			case 0: // fusion
 				typeText = "Fusion";
 				break;
@@ -861,8 +879,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				break;
 			}
 			// +1 since background not included
-			return "Event Location: " + this.location + " First Label: " + (this.firstLabel + 1) + " Second Label: " + (this.secondLabel + 1) + " Type: "
-					+ typeText;
+			return "Event Location: " + this.location + " First Label: " + (this.firstLabel + 1) + " Second Label: " + (this.secondLabel + 1) + " Type: " + typeText;
 		}
 
 		public boolean sameLocation(Vector3D other) {
@@ -873,14 +890,12 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		public boolean sameLocation(EventNode other) {
 			return sameLocation(other.location);
 		}
-		
-		public double distance(EventNode other)
-		{
+
+		public double distance(EventNode other) {
 			return location.distance(other.location);
 		}
-		
-		public void add(EventNode other)
-		{
+
+		public void add(EventNode other) {
 			location = location.add(other.location);
 		}
 	};
