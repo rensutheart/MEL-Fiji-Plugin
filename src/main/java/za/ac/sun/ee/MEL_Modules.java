@@ -12,6 +12,7 @@ import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.ops.OpService;
 import net.imglib2.type.numeric.RealType;
+import util.opencsv.CSVWriter;
 
 import org.jgrapht.Graph;
 import org.jgrapht.graph.DefaultEdge;
@@ -44,6 +45,7 @@ import mcib3d.image3d.ImageInt;
 import mcib3d.image3d.ImageLabeller;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -99,6 +101,12 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 	@Parameter(label = "Display full debug output in the console", persist = false, required = false)
 	private boolean debug_output;
 
+	@Parameter(label = "Save event locations as CSV", persist = false, required = false)
+	private boolean save_event_location = false;
+
+	@Parameter(label = "Path to event location of CSV file", persist = false, required = false)
+	private String path_to_event_csv = "";
+	
 	@Override
 	public void run() {
 		long startTime = System.currentTimeMillis();
@@ -263,20 +271,26 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		System.out.println(String.format("Number of events:\n\tFusion = %d\n\tFission = %d\n\tDepolarisation = %d", fusionEventCount, fissionEventCount, depolarisationEventCount));
 		System.out.println("Fission:Fusion ratio = " + ((float) fissionEventCount / (float) fusionEventCount));
 
+		
+		/*
+		 * RESULTS
+		 */
 		ResultsTable table = ResultsTable.getResultsTable();
 		table.incrementCounter();
 
 		table.addValue("Fusion events", fusionEventCount);
 		table.addValue("Fission events", fissionEventCount);
 		table.addValue("Depolarisation events", depolarisationEventCount);
-		// table.addColumns();
 
 		table.show("MEL Results");
 
+		if(save_event_location && path_to_event_csv.toLowerCase().endsWith(".csv"))
+				saveAllEventLocations(path_to_event_csv, fusionEventLocations, fissionEventLocations, depolarisationEventLocations);
 
 		long endTime = System.currentTimeMillis();
 		System.out.println("MEL - Total execution time: " + (endTime - startTime) + "ms");
 	}
+
 
 	public ImageInt getLabeledImage(ImagePlus imgPlus, int minStructureVolume) {
 		// Create Labeler
@@ -804,12 +818,14 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		public Vector3D location;
 		public int firstLabel;
 		public int secondLabel;
+		public int associatedLabelInOtherFrame;
 		public int eventType; // 0 = fusion, 1 = fission, 2 = depolarisation
 
-		public EventNode(Vector3D location, int label1, int label2, int eventType) {
+		public EventNode(Vector3D location, int label1, int label2, int associatedInOtherFrame, int eventType) {
 			this.location = location;
 			firstLabel = label1;
 			secondLabel = label2;
+			associatedLabelInOtherFrame = associatedInOtherFrame;
 			this.eventType = eventType;
 		}
 
@@ -827,7 +843,14 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				break;
 			}
 			// +1 since background not included
-			return "Event Location: " + this.location + " First Label: " + (this.firstLabel + 1) + " Second Label: " + (this.secondLabel + 1) + " Type: " + typeText;
+			return "Event Location: " + this.location + " First Label: " + (this.firstLabel + 1) + " Second Label: " + (this.secondLabel + 1) + " Associated in other frame: " + this.associatedLabelInOtherFrame + " Type: " + typeText;
+		}
+		
+		public String[] toStringCSV() {
+			// +1 since background not included
+			String[] csv = {this.eventType + "", this.location.x + "", this.location.y + "", this.location.z + "", (this.firstLabel + 1) + "", (this.secondLabel + 1) + "", (this.associatedLabelInOtherFrame + 1) + ""};
+			
+			return csv;
 		}
 
 		public boolean sameLocation(Vector3D other) {
@@ -1179,7 +1202,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 	}
 
 	// run along the graph until I find a transition between two labels and that is
-	// presumably the event location.
+	// presumably the event location. This is used for fission and fusion events.
 	public List<EventNode> findEvents(Graph<GraphNode, DefaultEdge> inputGraph, List<Graph<Vector3D, DefaultEdge>> labelsSkeletonGraphs, boolean removeDuplicates, float duplicateDistance, int type) {
 		long startTime = System.currentTimeMillis();
 
@@ -1200,7 +1223,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 						Vector3D eventLocation = getHalfwayPoint(node1.location, node2.location, true);
 
 						if (!eventList.contains(eventLocation)) {
-							EventNode newNode = new EventNode(eventLocation, node1.relatedLabelInOtherFrame, node2.relatedLabelInOtherFrame, type);
+							EventNode newNode = new EventNode(eventLocation, node1.relatedLabelInOtherFrame, node2.relatedLabelInOtherFrame, node1.relatedLabelInThisFrame, type);
 							eventList.add(newNode);
 							if (debug_output)
 								System.out.println("EVENT: " + newNode);
@@ -1276,7 +1299,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				centerPoint.z = Math.round(centerPoint.z);
 				Vector3D centerVector = new Vector3D(centerPoint);
 //				Voxel3D centerVoxel = new Voxel3D(centerPoint, (i + 1));
-				eventList.add(new EventNode(centerVector, i, i, 2));
+				eventList.add(new EventNode(centerVector, i, i, -1, 2)); // -1 since then it will be made 0 before writing to CSV (which is the background)
 			}
 		}
 
@@ -1381,6 +1404,40 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 		return image;
 	}
+	
+	private void saveAllEventLocations(String path_to_event_csv_file, List<EventNode> fusionEventLocations, List<EventNode> fissionEventLocations, List<EventNode> depolarisationEventLocations) {
+		List<String[]> csvData = new ArrayList<>();
+		
+		String[] header = {"EventType", "Loc_X", "Loc_Y", "Loc_Z", "Label_1", "Label_2", "AssocInOtherFrame"};
+		csvData.add(header);
+		
+		for(EventNode eventNode : fusionEventLocations)
+		{
+			csvData.add(eventNode.toStringCSV());
+		}
+		
+		for(EventNode eventNode : fissionEventLocations)
+		{
+			csvData.add(eventNode.toStringCSV());
+		}
+		
+		for(EventNode eventNode : depolarisationEventLocations)
+		{
+			csvData.add(eventNode.toStringCSV());
+		}
+		
+		
+		try{
+			CSVWriter writer = new CSVWriter(new FileWriter(path_to_event_csv_file));
+			
+			writer.writeAll(csvData);
+			writer.close();
+			System.out.println("Successfully wrote the events to " + path_to_event_csv_file);
+		}catch (Exception e) {
+			System.out.print(e);
+		}
+	}
+	
 
 	// This is primarily for debugging purposes
 	public void printAllWindowTitles() {

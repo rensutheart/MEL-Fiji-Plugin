@@ -3,6 +3,7 @@ outputPath = "C:/RESEARCH/MEL/MEL_Output/"
 var singleImage = true;
 var stack = true;
 run("Console");
+close("*");
 	
 //var extenstion = ".tif";
 //open("C:/Users/rptheart/Dropbox/Research/MitoMorph/MEL2/Temp/Test/Frame1_Thresholded" + extenstion);
@@ -35,7 +36,8 @@ for(f = 1; f <= (frames-1); f++)
 	run("MEL Process", "frame_1_title=Frame1 frame_2_title=Frame2  "+
 	"min_structure_volume=5 min_overlap_percentage=0.5 skeleton_distance_threshold=20 "+
 	"depolarisation_range_threshold=50 depolarisation_volume_similarity_threshold=2.0"+
-	" remove_duplicates=true duplicate_range=10 debug_output=false"); 
+	" remove_duplicates=true duplicate_range=10 debug_output=false " +
+	"save_event_location=true path_to_event_csv=C:/RESEARCH/MEL/MEL_Output/EventLocations"+f+".csv"); 
 	
 		
 	
@@ -157,6 +159,14 @@ for(f = 1; f <= (frames-1); f++)
 
 	if(singleImage)
 	{
+		
+	selectWindow("Labels Frame1");
+	save(outputPath + "labelsF1.tiff");	
+	
+	selectWindow("Labels Frame2");
+	save(outputPath + "labelsF2.tiff");	
+
+	
 	 run("Tile");
 	 run("Synchronize Windows");
 	}
