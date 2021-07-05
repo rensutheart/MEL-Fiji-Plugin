@@ -836,7 +836,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				typeText = "Fusion";
 				break;
 			case 1: // fission
-				typeText = "Fusion";
+				typeText = "Fission";
 				break;
 			case 2: // depolarisation
 				typeText = "Depolarisation";
@@ -1391,13 +1391,15 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 	}
 
 	public ImageInt eventsToImage(List<EventNode> eventList, int width, int height, int nSlices, String title) {
-		ImagePlus graphImage = NewImage.createImage("Graph Image", width, height, nSlices, 16, NewImage.FILL_BLACK);
+		ImagePlus imageBase = NewImage.createImage("Graph Image", width, height, nSlices, 8, NewImage.FILL_BLACK);
 
-		ImageInt image = ImageInt.wrap(graphImage);
+		ImageInt image = ImageInt.wrap(imageBase);
 
 		for (EventNode eL : eventList) {
 			Vector3D eLVector = eL.location;
-			image.setPixel((int) eLVector.x, (int) eLVector.y, (int) eLVector.z, 1);
+			image.setPixel((int) eLVector.x, (int) eLVector.y, (int) eLVector.z, 255);
+			if(debug_output)
+				System.out.println("Wrote to image: " + eL);
 		}
 
 		image.show(title);
