@@ -285,7 +285,11 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		table.show("MEL Results");
 
 		if(save_event_location && path_to_event_csv.toLowerCase().endsWith(".csv"))
+		{
+				System.out.print("SAVING");
+				System.out.println("path_to_event_csv: " + path_to_event_csv);
 				saveAllEventLocations(path_to_event_csv, fusionEventLocations, fissionEventLocations, depolarisationEventLocations);
+		}
 
 		long endTime = System.currentTimeMillis();
 		System.out.println("MEL - Total execution time: " + (endTime - startTime) + "ms");
