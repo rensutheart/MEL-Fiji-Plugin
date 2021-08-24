@@ -1,4 +1,7 @@
-outputPath = "C:/RESEARCH/MEL/MEL_Output/"
+inputPathToTimelapse = "C:/RESEARCH/Sholto_Conf/4.Thresholded/100-10/LME.tif";
+outputPath = "C:/RESEARCH/Sholto_Conf/5.MEL_Output/100-10/";
+
+SF = 3;
 
 var stack = true;
 run("Console");
@@ -9,7 +12,7 @@ run("Console");
 //open("C:/Users/rptheart/Dropbox/Research/MitoMorph/MEL2/Temp/Test/Frame2_Thresholded" + extenstion);
 //rename("Frame2");
 
-open("C:/RESEARCH/MEL/Thresholded/Con001_otsu.tif");
+open(inputPathToTimelapse);
 rename("Timelapse");
 getDimensions(width, height, channels, slices, frames);
 if(channels > 1)
@@ -29,9 +32,10 @@ for(f = 1; f <= (frames-1); f++)
 	rename("Frame2");
 	
 	run("MEL Process", "frame_1_title=Frame1 frame_2_title=Frame2  "+
-	"min_structure_volume=5 min_overlap_percentage=0.5 skeleton_distance_threshold=20 "+
-	"depolarisation_range_threshold=20 depolarisation_volume_similarity_threshold=0.2"+
-	" remove_duplicates=true duplicate_range=10 debug_output=false"); 
+	"min_structure_volume="+(10*SF)+" min_overlap_percentage=0.5 skeleton_distance_threshold="+(20*SF)+" "+
+	"depolarisation_range_threshold="+(50*SF)+" depolarisation_volume_similarity_threshold=2.0"+
+	" remove_duplicates=true duplicate_range="+(10*SF)+" debug_output=false " +
+	"save_event_location=true path_to_event_csv="+outputPath+"EventLocations"+f+".csv");
 	
 		
 	
@@ -64,30 +68,45 @@ for(f = 1; f <= (frames-1); f++)
 		//run("Duplicate...", "duplicate");
 		run("8-bit");
 		run("Convert to Mask", "method=Otsu background=Dark calculate black");
-		run("Dilate", "stack");
-		run("Dilate", "stack");
+		//run("Dilate", "stack");
+		run("Erode", "stack");
+		run("Erode", "stack");
+		run("Erode", "stack");	
 		run("Smooth", "stack");
 		run("Smooth", "stack");
+		run("Smooth", "stack");
+		run("Smooth", "stack");
+
 		// run("Z Project...", "projection=[Max Intensity]");
 		
 		selectWindow("Fission events");
 		//run("Duplicate...", "duplicate");
 		run("8-bit");
 		run("Convert to Mask", "method=Otsu background=Dark calculate black");
-		run("Dilate", "stack");
-		run("Dilate", "stack");
+		//run("Dilate", "stack");
+		run("Erode", "stack");
+		run("Erode", "stack");
+		run("Erode", "stack");	
 		run("Smooth", "stack");
 		run("Smooth", "stack");
+		run("Smooth", "stack");
+		run("Smooth", "stack");
+
 		// run("Z Project...", "projection=[Max Intensity]");
 		
 		selectWindow("Depolarisation events");
 		//run("Duplicate...", "duplicate");
 		run("8-bit");
 		run("Convert to Mask", "method=Otsu background=Dark calculate black");
-		run("Dilate", "stack");
-		run("Dilate", "stack");
+		//run("Dilate", "stack");
+		run("Erode", "stack");
+		run("Erode", "stack");
+		run("Erode", "stack");	
 		run("Smooth", "stack");
 		run("Smooth", "stack");
+		run("Smooth", "stack");
+		run("Smooth", "stack");
+
 		// run("Z Project...", "projection=[Max Intensity]");
 		
 		//run("Merge Channels...", "c1=[MAX_Fission events-1] c2=[MAX_Fusion events-1] c3=[MAX_Depolarisation events-1] keep");
@@ -115,8 +134,10 @@ for(f = 1; f <= (frames-1); f++)
 		//run("Duplicate...", "duplicate");
 		run("8-bit");
 		run("Convert to Mask", "method=Otsu background=Dark calculate black");
-		run("Dilate", "stack");
-		run("Dilate", "stack");
+		//run("Dilate", "stack");
+		run("Erode", "stack");
+		run("Erode", "stack");
+		run("Erode", "stack");	
 		run("Smooth", "stack");
 		run("Smooth", "stack");
 		
@@ -124,8 +145,10 @@ for(f = 1; f <= (frames-1); f++)
 		//run("Duplicate...", "duplicate");
 		run("8-bit");
 		run("Convert to Mask", "method=Otsu background=Dark calculate black");
-		run("Dilate", "stack");
-		run("Dilate", "stack");
+		//run("Dilate", "stack");
+		run("Erode", "stack");
+		run("Erode", "stack");
+		run("Erode", "stack");	
 		run("Smooth", "stack");
 		run("Smooth", "stack");
 		
@@ -133,8 +156,10 @@ for(f = 1; f <= (frames-1); f++)
 		//run("Duplicate...", "duplicate");
 		run("8-bit");
 		run("Convert to Mask", "method=Otsu background=Dark calculate black");
-		run("Dilate", "stack");
-		run("Dilate", "stack");
+		//run("Dilate", "stack");
+		run("Erode", "stack");
+		run("Erode", "stack");
+		run("Erode", "stack");	
 		run("Smooth", "stack");
 		run("Smooth", "stack");
 		
@@ -158,7 +183,7 @@ for(f = 1; f <= (frames-1); f++)
 }
 
 selectWindow("MEL Results"); 
-saveAs("Results", outputPath + "MEL Results.csv");
+saveAs("Results", outputPath + "MEL_Results.csv");
 
 
 
