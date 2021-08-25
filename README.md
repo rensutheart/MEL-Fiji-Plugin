@@ -7,12 +7,14 @@ Copy the `MEL_Fiji_Plugin.jar` into the the `plugins` folder of where you extrac
 This plugin relies on the [3D ImageJ Suite](https://imagejdocu.tudor.lu/plugin/stacks/3d_ij_suite/start), which can be downloaded [here](https://imagejdocu.tudor.lu/_media/plugin/stacks/3d_ij_suite/mcib3d-suite3.96.zip). Extract and copy it to the same plugins folder.
 
 ## Usage
-This plugin is still under development, and is not quite usable yet without some tweaking to the code. We hope to have a working version ready by July 2021.
+This plugin is still under development, it should however be mostly functional even though the documentation is currently limited. We hope to improve the user friendliness of the system and have it entirely refined by the end of 2021.
 
 Currently, the plugin can be run by selecting it under "Plugins>MEL Process" in the Fiji menu system.
 
+If you face issues with the use of this plugin, please email me at rptheart(at)sun.ac.za
+
 ## Dependencies
-This plugin relies on several other plugins to work. A full list will be provided with final release.
+This plugin relies on the mcib3d-suite to work. The appropriate version can be found as a zip file in this repository. Please extract the zip file to the Fiji plugins folder as explained above under Installation.
 
 ## Reference
 If you use this plugin, please cite the following paper:
