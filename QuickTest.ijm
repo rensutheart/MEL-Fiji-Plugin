@@ -22,7 +22,11 @@ print(frames + " frames detected");
 print(slices + " slices detected");
 
 for(f = 1; f <= (frames-1); f++)
-{	
+{		
+	fText = "" + f + ".tif";
+	if(f < 10)
+		fText = "0" + fText;
+
 	// extract fames from timelapse
 	run("Make Substack...", "slices=1-" + slices +" frames=" + f);
 	rename("Frame1");
@@ -40,9 +44,11 @@ for(f = 1; f <= (frames-1); f++)
 		
 	
 	selectWindow("Labels Frame1");
+	save(outputPath + fText+"_L1");
 	run("mpl-viridis");
 	
 	selectWindow("Labels Frame2");
+	save(outputPath + fText+"_L2");
 	run("mpl-viridis");
 	
 	//selectWindow("Matched graph");
@@ -112,10 +118,6 @@ for(f = 1; f <= (frames-1); f++)
 		//run("Merge Channels...", "c1=[MAX_Fission events-1] c2=[MAX_Fusion events-1] c3=[MAX_Depolarisation events-1] keep");
 		//run("Merge Channels...", "c1=[MAX_Fission events] c2=[MAX_Fusion events] c3=[MAX_Depolarisation events]");
 		run("Merge Channels...", "c1=[Fission events] c2=[Fusion events] c3=[Depolarisation events]");
-	
-		fText = "" + f + ".tif";
-		if(f < 10)
-			fText = "0" + fText;
 
 		// save Events RGB image
 		save(outputPath + "Events" + fText);
