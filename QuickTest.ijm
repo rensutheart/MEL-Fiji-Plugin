@@ -1,6 +1,9 @@
 inputPathToTimelapse = "C:/RESEARCH/Sholto_Conf/4.Thresholded/100-10/LME.tif";
 outputPath = "C:/RESEARCH/Sholto_Conf/5.MEL_Output/100-10/";
 
+if(!File.exists(outputPath))
+	File.makeDirectory(outputPath);
+
 SF = 3;
 
 var stack = true;
@@ -21,7 +24,8 @@ if(channels > 1)
 print(frames + " frames detected");
 print(slices + " slices detected");
 
-for(f = 1; f <= (frames-1); f++)
+f = 1;
+//for(f = 1; f <= (frames-1); f++)
 {		
 	fText = "" + f + ".tif";
 	if(f < 10)

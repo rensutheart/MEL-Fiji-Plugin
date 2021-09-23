@@ -124,6 +124,9 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //
 //		ImagePlus imagePlus_Frame1 = WindowManager.getImage(title_Frame1);
 //		ImagePlus imagePlus_Frame2 = WindowManager.getImage(title_Frame2);
+		
+		
+		
 
 		ImagePlus imagePlus_Frame1 = WindowManager.getImage(frame_1_title);
 		ImagePlus imagePlus_Frame2 = WindowManager.getImage(frame_2_title);
@@ -138,10 +141,17 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// Get the segmented labeled mitochondrial structures
 		ImageInt labels_F1 = getLabeledImage(imagePlus_Frame1, min_structure_volume);
 		ImageInt labels_F2 = getLabeledImage(imagePlus_Frame2, min_structure_volume);
-
+		
+		// Create and calculate the measures (index 0 is label 1)
+		SimpleMeasure labels_F1_measure = new SimpleMeasure(labels_F1);
+		SimpleMeasure labels_F2_measure = new SimpleMeasure(labels_F2);
+		// labels_F1_measure.printStats(labels_F1_measure.compactnessStats);
+		// labels_F1_measure.compactnessStats.get(0);
+				
 		// this 1 removes the background and only retains mitochondrial structures
 		Object3DVoxels[] labelVoxels_F1 = labelImageTo3DVoxelArray(labels_F1, 1);
 		Object3DVoxels[] labelVoxels_F2 = labelImageTo3DVoxelArray(labels_F2, 1);
+		
 
 		// Display results
 		labels_F1.show("Labels Frame1");
