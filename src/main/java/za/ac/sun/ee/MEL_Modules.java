@@ -143,7 +143,9 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		ImageInt labels_F2 = getLabeledImage(imagePlus_Frame2, min_structure_volume);
 		
 		// Create and calculate the measures (index 0 is label 1)
+		System.out.println("Start SimpleMeasure for Label 1");
 		SimpleMeasure labels_F1_measure = new SimpleMeasure(labels_F1);
+		System.out.println("Start SimpleMeasure for Label 2");
 		SimpleMeasure labels_F2_measure = new SimpleMeasure(labels_F2);		
 		/*
 		 * Use can use the SimpleMeasure like this:
@@ -351,19 +353,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 		// NOTES: This excludes background if labelImageTo3DVoxelArray() was called with
 		// a start label of 1
-		boolean printProgress = true;
-
 		for (int label_F1 = 0; label_F1 < numLabels_F1; ++label_F1) {
-			// display progress of function (since it is quite slow)
-			float percentDone = (float) label_F1 / numLabels_F1 * 100;
-			if ((int) percentDone % 5 == 0) {
-				if (printProgress)
-					System.out.println(String.format("%.1f%%", percentDone));
-				printProgress = false;
-			} else {
-				printProgress = true;
-			}
-
 			for (int label_F2 = 0; label_F2 < numLabels_F2; ++label_F2) {
 				overlappingVolumes[label_F1][label_F2] = labelVoxels_F1[label_F1].getColocVoxels(labelVoxels_F2[label_F2]);
 
