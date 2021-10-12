@@ -143,10 +143,12 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		ImageInt labels_F2 = getLabeledImage(imagePlus_Frame2, min_structure_volume);
 		
 		// Create and calculate the measures (index 0 is label 1)
+		long timeBeforeMeasure = System.currentTimeMillis();
 		System.out.println("Start SimpleMeasure for Label 1");
 		SimpleMeasure labels_F1_measure = new SimpleMeasure(labels_F1);
 		System.out.println("Start SimpleMeasure for Label 2");
 		SimpleMeasure labels_F2_measure = new SimpleMeasure(labels_F2);		
+		System.out.println("SimpleMeasure took " + (timeBeforeMeasure - System.currentTimeMillis()) + "ms");
 		/*
 		 * Use can use the SimpleMeasure like this:
 		 * Print table of all parameters:
@@ -181,19 +183,11 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		int[][] overlappingVolumes = getOverlappingVolumes(labelVoxels_F1, labelVoxels_F2);
 
 		
-		Point3D[] centerOfStructures_F1 = labels_F1_measure.getCentroidPoints();
-		Point3D[] centerOfStructures_F2 = labels_F2_measure.getCentroidPoints();
-
-		int[] numVoxelsInStructures_F1 = labels_F1_measure.getVolumes();
-		int[] numVoxelsInStructures_F2 = labels_F2_measure.getVolumes();		
-		
-		
-
 		List<List<Integer>> associatedLabelsBetweenFrames_F1toF2 = getAssociatedLabelsBetweenFrames(overlappingVolumes);
 		List<List<Integer>> associatedLabelsBetweenFrames_F2toF1 = getAssociatedLabelsBetweenFrames(transposeMatrix(overlappingVolumes));
 
 		List<List<Integer>> associatedLabelsBetweenFrames_F1toF2_withDep = addRoughDepolarisationMatch(associatedLabelsBetweenFrames_F1toF2, associatedLabelsBetweenFrames_F2toF1,
-				centerOfStructures_F1, numVoxelsInStructures_F1, centerOfStructures_F2, numVoxelsInStructures_F2, depolarisation_range_threshold, depolarisation_volume_similarity_threshold);
+				labels_F1_measure, labels_F2_measure, depolarisation_range_threshold, depolarisation_volume_similarity_threshold);
 
 		// I don't seem to need this anymore for the new approach
 //		List<List<Integer>> associatedLabelsWithinFrame_F1 = getAssociatedLabelsWithinFrame(associatedLabelsBetweenFrames_F1toF2, associatedLabelsBetweenFrames_F2toF1);
@@ -252,8 +246,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		 * DETECT FUSION
 		 */
 		// Find the matched skeleton F1 to F2
-		if (debug_output)
-			System.out.println("\nFIND FUSION");
+		System.out.println("\nFIND FUSION");
 		Graph<GraphNode, DefaultEdge> matchedGraphs_onF2 = matchGraphNodesBetweenFrames(labelsSkeletonGraphs_F1, labelsSkeletonGraphs_F2, reducedAssociatedLabelsBetweenFrames_F1toF2,
 				skeleton_distance_threshold);
 		showGraphNodesAsImage(matchedGraphs_onF2, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, true, "Matched graph Fusion");
@@ -267,8 +260,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		 * DETECT FISSION
 		 */
 		// Find the matched skeleton F2 to F1
-		if (debug_output)
-			System.out.println("\nFIND FISSION");
+		System.out.println("\nFIND FISSION");
 		Graph<GraphNode, DefaultEdge> matchedGraphs_onF1 = matchGraphNodesBetweenFrames(labelsSkeletonGraphs_F2, labelsSkeletonGraphs_F1, reducedAssociatedLabelsBetweenFrames_F2toF1,
 				skeleton_distance_threshold);
 		showGraphNodesAsImage(matchedGraphs_onF1, labels_F1.sizeX, labels_F1.sizeY, labels_F1.sizeZ, true, "Matched graph Fission");
@@ -281,8 +273,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		/*
 		 * DETECT DEPOLARISATION
 		 */
-		if (debug_output)
-			System.out.println("\nFIND DEPOLARISATION");
+		System.out.println("\nFIND DEPOLARISATION");
 		// NOTE: I'm NOT using the reducedAssociatedLabelsBetweenFrames_F1toF2 list
 		// here, since for depolarisation I would err on the side of caution, and if
 		// there is a slight possibility that the even did join to another structure or
@@ -293,7 +284,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		int fusionEventCount = fusionEventLocations.size();
 		int fissionEventCount = fissionEventLocations.size();
 		int depolarisationEventCount = depolarisationEventLocations.size();
-		System.out.println(String.format("Number of events:\n\tFusion = %d\n\tFission = %d\n\tDepolarisation = %d", fusionEventCount, fissionEventCount, depolarisationEventCount));
+		System.out.println(String.format("\nNumber of events:\n\tFusion = %d\n\tFission = %d\n\tDepolarisation = %d", fusionEventCount, fissionEventCount, depolarisationEventCount));
 		System.out.println("Fission:Fusion ratio = " + ((float) fissionEventCount / (float) fusionEventCount));
 
 		
@@ -311,7 +302,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 		if(save_event_location && path_to_event_csv.toLowerCase().endsWith(".csv"))
 		{
-				System.out.print("SAVING");
+				System.out.println("\nSAVING");
 				System.out.println("path_to_event_csv: " + path_to_event_csv);
 				saveAllEventLocations(path_to_event_csv, fusionEventLocations, fissionEventLocations, depolarisationEventLocations);
 		}
@@ -410,14 +401,21 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 	}
 
 	public List<List<Integer>> addRoughDepolarisationMatch(List<List<Integer>> associatedLabelsBetweenFrames_F1_to_F2, List<List<Integer>> associatedLabelsBetweenFrames_F2_to_F1,
-			Point3D[] centerOfStructures_F1, int[] numVoxelsInStructures_F1, Point3D[] centerOfStructures_F2, int[] numVoxelsInStructures_F2, float depolarisationRange,
-			float depolarisationVolumeSimilarity) {
+			SimpleMeasure labels_F1_measure, SimpleMeasure labels_F2_measure, float depolarisationRange, float depolarisationVolumeSimilarity) {
 		List<List<Integer>> associatedLabelsBetweenFrames_F1_to_F2_withDep = new ArrayList<List<Integer>>(associatedLabelsBetweenFrames_F1_to_F2.size());
-
 		/*
 		 * This section tries to find "Close" structures of similar volume, before
 		 * allowing something to be considered as depolarisation
 		 */
+		
+		
+		Point3D[] centerOfStructures_F1 = labels_F1_measure.getCentroidPoints();
+		Point3D[] centerOfStructures_F2 = labels_F2_measure.getCentroidPoints();
+
+		int[] numVoxelsInStructures_F1 = labels_F1_measure.getVolumes();
+		int[] numVoxelsInStructures_F2 = labels_F2_measure.getVolumes();	
+		
+		
 		// AFTER the associated labels are found, look at those that had none for
 		// possible "false positive depolarisation"
 		for (int i = 0; i < associatedLabelsBetweenFrames_F1_to_F2.size(); i++) {
@@ -440,9 +438,12 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 					if (associatedLabelsBetweenFrames_F2_to_F1.get(j).size() != 0)
 						continue;
 						
-
+					// START HERE: Just use normal Sphericty (Unit) and Compactness (Unit) - this seems like it is what I'm looking for
 					double newDistance = centerCurrent.distance(centerOfStructures_F2[j]);
 					if (newDistance < depolarisationRange) {
+						// the exact same value will result in a value of 0, 
+						// if F2 is greater the value will be negative
+						// if F1 is greater the value will be positive
 						double newVoxelRange = Math.abs(numVoxelsCurrent / numVoxelsInStructures_F2[j] - 1);
 						// check if they are of similar volume, could be larger or smaller, looking for
 						// percentage difference
