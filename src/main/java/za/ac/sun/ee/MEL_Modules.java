@@ -144,9 +144,19 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		
 		// Create and calculate the measures (index 0 is label 1)
 		SimpleMeasure labels_F1_measure = new SimpleMeasure(labels_F1);
-		SimpleMeasure labels_F2_measure = new SimpleMeasure(labels_F2);
-		// labels_F1_measure.printStats(labels_F1_measure.compactnessStats);
-		// labels_F1_measure.compactnessStats.get(0);
+		SimpleMeasure labels_F2_measure = new SimpleMeasure(labels_F2);		
+		/*
+		 * Use can use the SimpleMeasure like this:
+		 * Print table of all parameters:
+		 * 	
+		 * 		labels_F1_measure.printStats(labels_F1_measure.compactnessStats);
+		 * 
+		 * Get a sub element in the table:
+		 * 
+		 * 		System.out.println("Label at 0: " + labels_F1_measure.compactnessStats.get(0)[SimpleMeasure.Compactness.LABEL.ordinal()]);
+		 */
+		
+
 				
 		// this 1 removes the background and only retains mitochondrial structures
 		Object3DVoxels[] labelVoxels_F1 = labelImageTo3DVoxelArray(labels_F1, 1);
@@ -168,11 +178,21 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// is off by 1 compared to the label image label number
 		int[][] overlappingVolumes = getOverlappingVolumes(labelVoxels_F1, labelVoxels_F2);
 
-		Point3D[] centerOfStructures_F1 = getCenterOfStructures(labelVoxels_F1);
-		Point3D[] centerOfStructures_F2 = getCenterOfStructures(labelVoxels_F2);
+		
+		// These are now already calculated in the SimpleMeasure calculations
+//		Point3D[] centerOfStructures_F1 = getCenterOfStructures(labelVoxels_F1);
+//		Point3D[] centerOfStructures_F2 = getCenterOfStructures(labelVoxels_F2);
+//
+//		int[] numVoxelsInStructures_F1 = getNumVoxelsInStructures(labelVoxels_F1);
+//		int[] numVoxelsInStructures_F2 = getNumVoxelsInStructures(labelVoxels_F2);
+		
+		Point3D[] centerOfStructures_F1 = labels_F1_measure.getCentroidPoints();
+		Point3D[] centerOfStructures_F2 = labels_F2_measure.getCentroidPoints();
 
-		int[] numVoxelsInStructures_F1 = getNumVoxelsInStructures(labelVoxels_F1);
-		int[] numVoxelsInStructures_F2 = getNumVoxelsInStructures(labelVoxels_F2);
+		int[] numVoxelsInStructures_F1 = labels_F1_measure.getVolumes();
+		int[] numVoxelsInStructures_F2 = labels_F2_measure.getVolumes();		
+		
+		
 
 		List<List<Integer>> associatedLabelsBetweenFrames_F1toF2 = getAssociatedLabelsBetweenFrames(overlappingVolumes);
 		List<List<Integer>> associatedLabelsBetweenFrames_F2toF1 = getAssociatedLabelsBetweenFrames(transposeMatrix(overlappingVolumes));
@@ -369,25 +389,27 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		return overlappingVolumes;
 	}
 
-	public Point3D[] getCenterOfStructures(Object3DVoxels[] labelVoxels) {
-		Point3D[] centerOfStructures = new Point3D[labelVoxels.length];
-
-		for (int i = 0; i < centerOfStructures.length; i++) {
-			centerOfStructures[i] = labelVoxels[i].getCenterAsPoint();
-		}
-
-		return centerOfStructures;
-	}
-
-	public int[] getNumVoxelsInStructures(Object3DVoxels[] labelVoxels) {
-		int[] numVoxelsInStructure = new int[labelVoxels.length];
-
-		for (int i = 0; i < numVoxelsInStructure.length; i++) {
-			numVoxelsInStructure[i] = labelVoxels[i].getVoxels().size();
-		}
-
-		return numVoxelsInStructure;
-	}
+	
+	// These functions are made redundant by SimpleMeasure
+//	public Point3D[] getCenterOfStructures(Object3DVoxels[] labelVoxels) {
+//		Point3D[] centerOfStructures = new Point3D[labelVoxels.length];
+//
+//		for (int i = 0; i < centerOfStructures.length; i++) {
+//			centerOfStructures[i] = labelVoxels[i].getCenterAsPoint();
+//		}
+//
+//		return centerOfStructures;
+//	}
+//
+//	public int[] getNumVoxelsInStructures(Object3DVoxels[] labelVoxels) {
+//		int[] numVoxelsInStructure = new int[labelVoxels.length];
+//
+//		for (int i = 0; i < numVoxelsInStructure.length; i++) {
+//			numVoxelsInStructure[i] = labelVoxels[i].getVoxels().size();
+//		}
+//
+//		return numVoxelsInStructure;
+//	}
 
 	// The startLabel is primarily used for removing background (therefore
 	// startLabel = 1)

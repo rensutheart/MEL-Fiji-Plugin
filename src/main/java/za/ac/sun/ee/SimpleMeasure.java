@@ -14,6 +14,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import ij.plugin.Duplicator;
+import mcib3d.geom.Point3D;
 import mcib3d.geom2.Objects3DIntPopulation;
 import mcib3d.geom2.measurements.*;
 import mcib3d.image3d.ImageHandler;
@@ -107,6 +108,11 @@ public class SimpleMeasure {
     */
    public List<Double[]> feretStats; 
    
+   /**
+    * The number of structures for which parameters exist
+    */
+   public int length = 0;
+   
     public SimpleMeasure(ImagePlus in) {
         population = new Objects3DIntPopulation(ImageHandler.wrap(in));
         calculateAll(in);
@@ -128,6 +134,8 @@ public class SimpleMeasure {
     	elipsoidStats = getMeasuresEllipsoid();
     	distanceCentreContourStats = getMeasuresDistanceCentreContour();
     	feretStats = getMeasuresFeret();
+    	
+    	length = centroidStats.size();
     }
     
     private List<Double[]> sortList(List<Double[]> inList)
@@ -286,5 +294,30 @@ public class SimpleMeasure {
         } else stack = plus.duplicate();
 
         return stack;
+    }
+    
+    public Point3D[] getCentroidPoints()
+    {
+    	Point3D[] pointArray = new Point3D[length];
+    	
+    	for(int i = 0; i < length; i++)
+    	{
+    		pointArray[i] = new Point3D(centroidStats.get(i)[1], centroidStats.get(i)[2], centroidStats.get(i)[3]);
+    	}
+    	
+    	return pointArray;
+    }
+    
+    
+    public int[] getVolumes()
+    {
+    	int[] volumeArray = new int[length];
+    	
+    	for(int i = 0; i < length; i++)
+    	{
+    		volumeArray[i] = volumeStats.get(i)[1].intValue();
+    	}
+    	
+    	return volumeArray;
     }
 }
