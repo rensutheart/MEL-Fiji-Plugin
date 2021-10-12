@@ -1,5 +1,6 @@
 /* Modified by Rensu Theart - 2021
  * 
+ * SimpleMeasure labels_F1_measure = new SimpleMeasure(labels_F1);
  * 
  * Use can use the SimpleMeasure like this:
  * Print table of all parameters:
