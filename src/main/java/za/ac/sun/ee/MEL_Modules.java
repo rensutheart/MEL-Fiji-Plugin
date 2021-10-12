@@ -365,20 +365,12 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			}
 
 			for (int label_F2 = 0; label_F2 < numLabels_F2; ++label_F2) {
-				// TODO: This line of code is very slow - consider multiplying a single label
-				// structure with the entire image in the other frame
-				Object3DVoxels intersection = labelVoxels_F1[label_F1].getIntersectionObject(labelVoxels_F2[label_F2]);
-
-				int volumeOverlap = 0;
-				if (intersection != null) // structures are not disjoint
-					volumeOverlap = intersection.getVoxels().size();
-
-				overlappingVolumes[label_F1][label_F2] = volumeOverlap;
+				overlappingVolumes[label_F1][label_F2] = labelVoxels_F1[label_F1].getColocVoxels(labelVoxels_F2[label_F2]);
 
 				// This assumes a startLabel of 1
-				if (volumeOverlap != 0) {
+				if (overlappingVolumes[label_F1][label_F2] != 0) {
 					if (debug_output)
-						System.out.println("Label F1 " + (label_F1 + 1) + "  Label F2 " + (label_F2 + 1) + "  Volume Overlap " + volumeOverlap);
+						System.out.println("Label F1 " + (label_F1 + 1) + "  Label F2 " + (label_F2 + 1) + "  Volume Overlap " + overlappingVolumes[label_F1][label_F2]);
 				}
 			}
 		}
