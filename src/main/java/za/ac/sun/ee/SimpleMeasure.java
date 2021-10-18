@@ -358,4 +358,15 @@ public class SimpleMeasure {
 
 		return compactnessArray;
 	}
+	
+
+	public double[] getElongations() {
+		double[] elongationArray = new double[length];
+
+		for (int i = 0; i < length; i++) {
+			elongationArray[i] = elipsoidStats.get(i)[4];
+		}
+
+		return elongationArray;
+	}
 }

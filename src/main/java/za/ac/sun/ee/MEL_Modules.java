@@ -419,6 +419,9 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		double[] compactnessOfStructures_F1 = labels_F1_measure.getCompactnesses();
 		double[] compactnessOfStructures_F2 = labels_F2_measure.getCompactnesses();
 		
+		double[] elongationOfStructures_F1 = labels_F1_measure.getElongations();
+		double[] elongationOfStructures_F2 = labels_F2_measure.getElongations();
+		
 		// AFTER the associated labels are found, look at those that had none for
 		// possible "false positive depolarisation"
 		for (int i = 0; i < associatedLabelsBetweenFrames_F1_to_F2.size(); i++) {
@@ -429,10 +432,13 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			if (tempList.size() == 0) {
 				Point3D centerCurrent = centerOfStructures_F1[i];
 				int numVoxelsCurrent = numVoxelsInStructures_F1[i];
+				double currentSphericity = sphericityOfStructures_F1[i];
+				double currentCompactness = compactnessOfStructures_F1[i];
+				double currentElongation = elongationOfStructures_F1[i];
 
 				double minDistance = Float.POSITIVE_INFINITY;
 				double minVoxelRange = Float.POSITIVE_INFINITY;
-				int F2_index = Integer.MAX_VALUE;
+				int F2_index = Integer.MAX_VALUE; // this is the default "impossible" value, and it is check to ensure something did get assigned.
 
 				// loop through the structures in the other frame and try to find the closest
 				// structure close to the current center that is also similar volume
@@ -441,23 +447,34 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 					if (associatedLabelsBetweenFrames_F2_to_F1.get(j).size() != 0)
 						continue;
 						
-					// START HERE: Just use normal Sphericty (Unit) and Compactness (Unit) - this seems like it is what I'm looking for
 					double newDistance = centerCurrent.distance(centerOfStructures_F2[j]);
 					if (newDistance < depolarisationMovementRange) {
-						// the exact same value will result in a value of 0, 
+						// the reason for the "-1" is that the exact same value will result in a value of 0,
 						// if F2 is greater the value will be negative
 						// if F1 is greater the value will be positive
-						double newVoxelRange = Math.abs(numVoxelsCurrent / numVoxelsInStructures_F2[j] - 1);
+						double volumeSimilarity = Math.abs(numVoxelsCurrent / numVoxelsInStructures_F2[j] - 1);
+						double sphericitySimilarity = Math.abs(currentSphericity / sphericityOfStructures_F2[j] - 1);
+						double compactnessSimilarity = Math.abs(currentCompactness / compactnessOfStructures_F2[j] - 1);
+						double elongationSimilarity = Math.abs(currentElongation / elongationOfStructures_F2[j] - 1);
+						
+						System.out.println("i: " + i + " j: " + j);
+						System.out.println("volumeSimilarity:      " + volumeSimilarity);
+						System.out.println("sphericitySimilarity:  " + sphericitySimilarity);
+						System.out.println("compactnessSimilarity: " + compactnessSimilarity);
+						System.out.println("elongationSimilarity:  " + elongationSimilarity);
+						System.out.println();
+						
+
 						// check if they are of similar volume, could be larger or smaller, looking for
 						// percentage difference
-						if (newVoxelRange < depolarisationVolumeSimilarity) {
+						if (volumeSimilarity < depolarisationVolumeSimilarity) {
 							// Prioritise the distance, if closer, and still within the voxel num range,
 							// then set as new one.
 							if (newDistance <= minDistance) { // && newVoxelRange < minVoxelRange
 								if (debug_output)
-									System.out.println("NOT DEPOLARISATION. Link between " + (i + 1) + " and " + (j + 1) + " with distance " + newDistance + " and voxel similarity " + newVoxelRange);
+									System.out.println("NOT DEPOLARISATION. Link between " + (i + 1) + " and " + (j + 1) + " with distance " + newDistance + " and voxel similarity " + volumeSimilarity);
 								minDistance = newDistance;
-								minVoxelRange = newVoxelRange;
+								minVoxelRange = volumeSimilarity;
 								F2_index = j;
 							}
 						}
