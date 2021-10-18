@@ -148,7 +148,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		SimpleMeasure labels_F1_measure = new SimpleMeasure(labels_F1);
 		System.out.println("Start SimpleMeasure for Label 2");
 		SimpleMeasure labels_F2_measure = new SimpleMeasure(labels_F2);		
-		System.out.println("SimpleMeasure took " + (timeBeforeMeasure - System.currentTimeMillis()) + "ms");
+		System.out.println("SimpleMeasure took " + (System.currentTimeMillis() - timeBeforeMeasure) + "ms");
 		/*
 		 * Use can use the SimpleMeasure like this:
 		 * Print table of all parameters:
@@ -440,6 +440,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				double minVoxelRange = Float.POSITIVE_INFINITY;
 				int F2_index = Integer.MAX_VALUE; // this is the default "impossible" value, and it is check to ensure something did get assigned.
 
+				System.out.println("i, j, volumeSimilarity, sphericitySimilarity, compactnessSimilarity, elongationSimilarity");
 				// loop through the structures in the other frame and try to find the closest
 				// structure close to the current center that is also similar volume
 				for (int j = 0; j < centerOfStructures_F2.length; j++) {
@@ -457,12 +458,14 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 						double compactnessSimilarity = Math.abs(currentCompactness / compactnessOfStructures_F2[j] - 1);
 						double elongationSimilarity = Math.abs(currentElongation / elongationOfStructures_F2[j] - 1);
 						
-						System.out.println("i: " + i + " j: " + j);
-						System.out.println("volumeSimilarity:      " + volumeSimilarity);
-						System.out.println("sphericitySimilarity:  " + sphericitySimilarity);
-						System.out.println("compactnessSimilarity: " + compactnessSimilarity);
-						System.out.println("elongationSimilarity:  " + elongationSimilarity);
-						System.out.println();
+//						System.out.println("i: " + i + " j: " + j);
+//						System.out.println("volumeSimilarity:      " + volumeSimilarity);
+//						System.out.println("sphericitySimilarity:  " + sphericitySimilarity);
+//						System.out.println("compactnessSimilarity: " + compactnessSimilarity);
+//						System.out.println("elongationSimilarity:  " + elongationSimilarity);
+//						System.out.println();
+						
+						System.out.println(String.format("%d, %d, %f, %f, %f, %f",i, j, volumeSimilarity, sphericitySimilarity, compactnessSimilarity, elongationSimilarity));
 						
 
 						// check if they are of similar volume, could be larger or smaller, looking for
