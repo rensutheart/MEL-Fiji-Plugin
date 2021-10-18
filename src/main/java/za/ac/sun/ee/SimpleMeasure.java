@@ -338,4 +338,24 @@ public class SimpleMeasure {
 
 		return volumeArray;
 	}
+	
+	public double[] getSphericities() {
+		double[] sphericityArray = new double[length];
+
+		for (int i = 0; i < length; i++) {
+			sphericityArray[i] = compactnessStats.get(i)[6]; // Sphericity (Unit) but I think it is the same as the Pix variant
+		}
+
+		return sphericityArray;
+	}
+	
+	public double[] getCompactnesses() {
+		double[] compactnessArray = new double[length];
+
+		for (int i = 0; i < length; i++) {
+			compactnessArray[i] = compactnessStats.get(i)[1]; // Compactness (Unit)  but I think it is the same as the Pix variant
+		}
+
+		return compactnessArray;
+	}
 }

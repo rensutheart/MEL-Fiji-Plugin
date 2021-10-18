@@ -401,20 +401,23 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 	}
 
 	public List<List<Integer>> addRoughDepolarisationMatch(List<List<Integer>> associatedLabelsBetweenFrames_F1_to_F2, List<List<Integer>> associatedLabelsBetweenFrames_F2_to_F1,
-			SimpleMeasure labels_F1_measure, SimpleMeasure labels_F2_measure, float depolarisationRange, float depolarisationVolumeSimilarity) {
+			SimpleMeasure labels_F1_measure, SimpleMeasure labels_F2_measure, float depolarisationMovementRange, float depolarisationVolumeSimilarity) {
 		List<List<Integer>> associatedLabelsBetweenFrames_F1_to_F2_withDep = new ArrayList<List<Integer>>(associatedLabelsBetweenFrames_F1_to_F2.size());
 		/*
-		 * This section tries to find "Close" structures of similar volume, before
+		 * This section tries to find "Close" structures of similar volume, sphericity and compactness, before
 		 * allowing something to be considered as depolarisation
 		 */
-		
-		
 		Point3D[] centerOfStructures_F1 = labels_F1_measure.getCentroidPoints();
 		Point3D[] centerOfStructures_F2 = labels_F2_measure.getCentroidPoints();
 
 		int[] numVoxelsInStructures_F1 = labels_F1_measure.getVolumes();
 		int[] numVoxelsInStructures_F2 = labels_F2_measure.getVolumes();	
 		
+		double[] sphericityOfStructures_F1 = labels_F1_measure.getSphericities();
+		double[] sphericityOfStructures_F2 = labels_F2_measure.getSphericities();
+		
+		double[] compactnessOfStructures_F1 = labels_F1_measure.getCompactnesses();
+		double[] compactnessOfStructures_F2 = labels_F2_measure.getCompactnesses();
 		
 		// AFTER the associated labels are found, look at those that had none for
 		// possible "false positive depolarisation"
@@ -440,7 +443,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 						
 					// START HERE: Just use normal Sphericty (Unit) and Compactness (Unit) - this seems like it is what I'm looking for
 					double newDistance = centerCurrent.distance(centerOfStructures_F2[j]);
-					if (newDistance < depolarisationRange) {
+					if (newDistance < depolarisationMovementRange) {
 						// the exact same value will result in a value of 0, 
 						// if F2 is greater the value will be negative
 						// if F1 is greater the value will be positive
