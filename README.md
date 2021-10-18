@@ -4,7 +4,7 @@ This is an implementation of the Mitochondrial Event Localiser as a plugin for F
 ## Installation
 Copy the `MEL_Fiji_Plugin.jar` into the the `plugins` folder of where you extracted Fiji. (e.g. C:\&lt;path-to-Fiji&gt;\Fiji.app\plugins\MEL_Fiji_Plugin.jar)
 
-This plugin relies on the [3D ImageJ Suite](https://imagejdocu.tudor.lu/plugin/stacks/3d_ij_suite/start), which can be downloaded [here](https://imagejdocu.tudor.lu/_media/plugin/stacks/3d_ij_suite/mcib3d-suite3.96.zip). Extract and copy it to the same plugins folder.
+This plugin relies on the [3D ImageJ Suite](https://imagejdocu.tudor.lu/plugin/stacks/3d_ij_suite/start), which can be downloaded [here](https://imagejdocu.tudor.lu/_media/plugin/stacks/3d_ij_suite/mcib3d-suite3.96.zip), but the version the current MEL plugin relies on is 4.0.1 which can also be downloaded from this repository (the file is called `mcib3d-core-4.0.1.zip`). Extract and copy it to the same plugins folder.
 
 ## Usage
 This plugin is still under development, it should however be mostly functional even though the documentation is currently limited. We hope to improve the user friendliness of the system and have it entirely refined by the end of 2021.

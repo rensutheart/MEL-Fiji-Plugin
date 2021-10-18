@@ -187,7 +187,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		List<List<Integer>> associatedLabelsBetweenFrames_F2toF1 = getAssociatedLabelsBetweenFrames(transposeMatrix(overlappingVolumes));
 
 		List<List<Integer>> associatedLabelsBetweenFrames_F1toF2_withDep = addRoughDepolarisationMatch(associatedLabelsBetweenFrames_F1toF2, associatedLabelsBetweenFrames_F2toF1,
-				labels_F1_measure, labels_F2_measure, depolarisation_range_threshold, depolarisation_volume_similarity_threshold);
+				labels_F1_measure, labels_F2_measure, depolarisation_range_threshold, depolarisation_structure_similarity_threshold);
 
 		// I don't seem to need this anymore for the new approach
 //		List<List<Integer>> associatedLabelsWithinFrame_F1 = getAssociatedLabelsWithinFrame(associatedLabelsBetweenFrames_F1toF2, associatedLabelsBetweenFrames_F2toF1);
