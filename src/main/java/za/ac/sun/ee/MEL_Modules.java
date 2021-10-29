@@ -440,10 +440,11 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				double currentElongation = elongationOfStructures_F1[i];
 
 				double minDistance = Float.POSITIVE_INFINITY;
-				double minSphericitySimilarity = Float.POSITIVE_INFINITY;
-				double minCompactnessSimilarity = Float.POSITIVE_INFINITY;
-				double minElongationSimilarity = Float.POSITIVE_INFINITY;
-				double minVolumeSimilarity = Float.POSITIVE_INFINITY;
+				// Currently These are not used to try and match the strucutres instead they are replaced by a 'average error' which combines them
+				// double minSphericitySimilarity = Float.POSITIVE_INFINITY;
+				// double minCompactnessSimilarity = Float.POSITIVE_INFINITY;
+				// double minElongationSimilarity = Float.POSITIVE_INFINITY;
+				// double minVolumeSimilarity = Float.POSITIVE_INFINITY;
 				
 				double minAverageError = Float.POSITIVE_INFINITY;
 				
@@ -469,17 +470,17 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 						
 						double averageError = (volumeSimilarity + sphericitySimilarity + compactnessSimilarity + elongationSimilarity)/4;
 												
-						int foundMatch = 0;
+						int foundMatch = 0; // this is simply a variable that is used for printing to the console.
 						// check if they are of similar in volume and shape, could be larger or smaller, looking for
 						// percentage difference
 						if (averageError < depolarisationStructureSimilarity) {
-							// Prioritise the distance, if closer, and still within the similarity range,
-							// then set as new one.
-							if (newDistance <= minDistance) { // && newVoxelRange < minVoxelRange
+							// Prioritise the distance, if closer, and still within the similarity range, then set as new one.
+							if (newDistance <= minDistance && averageError < minAverageError) {
 								if (debug_output)
 									System.out.println("NOT DEPOLARISATION. Link between " + (i + 1) + " and " + (j + 1) + " with distance " + newDistance + " and voxel similarity " + volumeSimilarity);
 								minDistance = newDistance;
-								minVolumeSimilarity = volumeSimilarity;
+								// minVolumeSimilarity = volumeSimilarity;
+								minAverageError = averageError;
 								F2_index = j;
 								foundMatch = 1;
 							}
