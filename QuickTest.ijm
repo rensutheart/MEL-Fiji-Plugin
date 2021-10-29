@@ -8,12 +8,6 @@ SF = 3;
 
 var stack = true;
 run("Console");
-	
-//var extenstion = ".tif";
-//open("C:/Users/rptheart/Dropbox/Research/MitoMorph/MEL2/Temp/Test/Frame1_Thresholded" + extenstion);
-//rename("Frame1");
-//open("C:/Users/rptheart/Dropbox/Research/MitoMorph/MEL2/Temp/Test/Frame2_Thresholded" + extenstion);
-//rename("Frame2");
 
 open(inputPathToTimelapse);
 rename("Timelapse");
@@ -24,8 +18,8 @@ if(channels > 1)
 print(frames + " frames detected");
 print(slices + " slices detected");
 
-f = 1;
-//for(f = 1; f <= (frames-1); f++)
+//f = 1;
+for(f = 1; f <= (frames-1); f++)
 {		
 	fText = "" + f + ".tif";
 	if(f < 10)
@@ -41,9 +35,10 @@ print(slices + " slices detected");
 	
 	run("MEL Process", "frame_1_title=Frame1 frame_2_title=Frame2  "+
 	"min_structure_volume="+(10*SF)+" min_overlap_percentage=0.5 skeleton_distance_threshold="+(20*SF)+" "+
-	"depolarisation_range_threshold="+(50*SF)+" depolarisation_volume_similarity_threshold=2.0"+
+	"depolarisation_range_threshold="+(50*SF)+" depolarisation_structure_similarity_threshold=2.0"+
 	" remove_duplicates=true duplicate_range="+(10*SF)+" debug_output=false " +
-	"save_event_location=true path_to_event_csv="+outputPath+"EventLocations"+f+".csv");
+	"save_event_location_and_stats=true path_to_event_csv="+outputPath+"EventLocations"+f+".csv " + 
+	"path_to_f1_stats_csv="+outputPath+"f1_stats"+f+".csv path_to_f2_stats_csv="+outputPath+"f2_stats"+f+".csv");
 	
 		
 	
@@ -73,15 +68,16 @@ print(slices + " slices detected");
 	
 	selectWindow("Fusion events");
 	
+	operation = "Erode"; // "Erode" or "Dilate" - this differs based on your default fiji settings
 	if(stack)
-	{
+	{	
 		//run("Duplicate...", "duplicate");
 		run("8-bit");
 		run("Convert to Mask", "method=Otsu background=Dark calculate black");
-		//run("Dilate", "stack");
-		run("Erode", "stack");
-		run("Erode", "stack");
-		run("Erode", "stack");	
+		
+		run(operation, "stack");
+		run(operation, "stack");
+		run(operation, "stack");	
 		run("Smooth", "stack");
 		run("Smooth", "stack");
 		run("Smooth", "stack");
@@ -93,10 +89,10 @@ print(slices + " slices detected");
 		//run("Duplicate...", "duplicate");
 		run("8-bit");
 		run("Convert to Mask", "method=Otsu background=Dark calculate black");
-		//run("Dilate", "stack");
-		run("Erode", "stack");
-		run("Erode", "stack");
-		run("Erode", "stack");	
+		
+		run(operation, "stack");
+		run(operation, "stack");
+		run(operation, "stack");	
 		run("Smooth", "stack");
 		run("Smooth", "stack");
 		run("Smooth", "stack");
@@ -108,10 +104,10 @@ print(slices + " slices detected");
 		//run("Duplicate...", "duplicate");
 		run("8-bit");
 		run("Convert to Mask", "method=Otsu background=Dark calculate black");
-		//run("Dilate", "stack");
-		run("Erode", "stack");
-		run("Erode", "stack");
-		run("Erode", "stack");	
+		
+		run(operation, "stack");
+		run(operation, "stack");
+		run(operation, "stack");	
 		run("Smooth", "stack");
 		run("Smooth", "stack");
 		run("Smooth", "stack");
@@ -140,10 +136,10 @@ print(slices + " slices detected");
 		//run("Duplicate...", "duplicate");
 		run("8-bit");
 		run("Convert to Mask", "method=Otsu background=Dark calculate black");
-		//run("Dilate", "stack");
-		run("Erode", "stack");
-		run("Erode", "stack");
-		run("Erode", "stack");	
+		
+		run(operation, "stack");
+		run(operation, "stack");
+		run(operation, "stack");
 		run("Smooth", "stack");
 		run("Smooth", "stack");
 		
@@ -151,10 +147,10 @@ print(slices + " slices detected");
 		//run("Duplicate...", "duplicate");
 		run("8-bit");
 		run("Convert to Mask", "method=Otsu background=Dark calculate black");
-		//run("Dilate", "stack");
-		run("Erode", "stack");
-		run("Erode", "stack");
-		run("Erode", "stack");	
+
+		run(operation, "stack");
+		run(operation, "stack");
+		run(operation, "stack");
 		run("Smooth", "stack");
 		run("Smooth", "stack");
 		
@@ -162,10 +158,10 @@ print(slices + " slices detected");
 		//run("Duplicate...", "duplicate");
 		run("8-bit");
 		run("Convert to Mask", "method=Otsu background=Dark calculate black");
-		//run("Dilate", "stack");
-		run("Erode", "stack");
-		run("Erode", "stack");
-		run("Erode", "stack");	
+
+		run(operation, "stack");
+		run(operation, "stack");
+		run(operation, "stack");
 		run("Smooth", "stack");
 		run("Smooth", "stack");
 		
