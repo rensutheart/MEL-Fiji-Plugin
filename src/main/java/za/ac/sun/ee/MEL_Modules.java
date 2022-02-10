@@ -35,6 +35,8 @@ import ij.ImagePlus;
 import ij.WindowManager;
 import ij.gui.NewImage;
 import ij.measure.ResultsTable;
+import ij.gui.ProgressBar;
+import mcib3d.geom.Object3D;
 import mcib3d.geom.Object3DVoxels;
 import mcib3d.geom.Point3D;
 import mcib3d.geom.Vector3D;
@@ -56,6 +58,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Plugin(type = Command.class, name = "MEL", description = "Automatically calculate the mitochondrial fission, fusion and depolarisation event locations ", menuPath = "Plugins>MEL Process", headless = false)
 public class MEL_Modules<T extends RealType<T>> implements Command {
@@ -118,6 +121,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 	@Override
 	public void run() {
+		System.out.println("MEL V0.8.1");
 		long startTime = System.currentTimeMillis();
 		// I'm assuming the input images are Pre-processed and thresholded.
 
@@ -335,6 +339,11 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			saveAllEventLocations(path_to_event_csv, fusionEventLocations, fissionEventLocations,
 					depolarisationEventLocations);
 		}
+		else
+		{
+			System.out.println("You either set not to save the events or the path below does not end with .csv");
+			System.out.println(path_to_event_csv);
+		}
 
 		if (save_event_location_and_stats && path_to_f1_stats_csv.toLowerCase().endsWith(".csv")
 				&& path_to_f2_stats_csv.toLowerCase().endsWith(".csv")) {
@@ -347,8 +356,13 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			System.out.println("\nSAVING");
 			System.out.println("path_to_f2_stats_csv: " + path_to_f2_stats_csv);
 			saveMainLabelStats(path_to_f2_stats_csv, labels_F2_measure);
-		
 		}
+		else
+		{
+			System.out.println("You either set not to save the stats or the path below does not end with .csv");
+			System.out.println(path_to_f1_stats_csv);
+		}
+
 
 		long endTime = System.currentTimeMillis();
 		System.out.println("MEL - Total execution time: " + (endTime - startTime) + "ms");
@@ -381,8 +395,15 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// a start label of 1
 		for (int label_F1 = 0; label_F1 < numLabels_F1; ++label_F1) {
 			for (int label_F2 = 0; label_F2 < numLabels_F2; ++label_F2) {
-				overlappingVolumes[label_F1][label_F2] = labelVoxels_F1[label_F1]
-						.getColocVoxels(labelVoxels_F2[label_F2]);
+				
+				
+				// This is the one from Object3DVoxels.class
+//				overlappingVolumes[label_F1][label_F2] = labelVoxels_F1[label_F1]
+//						.getColocVoxels(labelVoxels_F2[label_F2]);
+				
+				// The is my custom one for this class
+				overlappingVolumes[label_F1][label_F2] = getColocVoxels(labelVoxels_F2[label_F2], labelVoxels_F1[label_F1]);
+				
 
 				// This assumes a startLabel of 1
 				if (overlappingVolumes[label_F1][label_F2] != 0) {
@@ -398,6 +419,102 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 		return overlappingVolumes;
 	}
+	
+	
+	
+	/*****
+	 * This is a duplication of the code in the Object3DVoxels.class, but with some additional debugging code 
+	 */
+	
+    protected int[] getIntersectionBox(Object3D other, Object3D first) {
+        int[] res = new int[6]; //xmin, xmax, ymin, ymax, zmin, zmax
+        res[0] = Math.max(first.getXmin(), other.getXmin());
+        res[1] = Math.min(first.getXmax(), other.getXmax());
+        res[2] = Math.max(first.getYmin(), other.getYmin());
+        res[3] = Math.min(first.getYmax(), other.getYmax());
+        res[4] = Math.max(first.getZmin(), other.getZmin());
+        res[5] = Math.min(first.getZmax(), other.getZmax());
+        return res;
+    }
+
+    private boolean computeOverlapBox(Object3D autre, Object3D first) {
+        int oxmin = autre.getXmin();
+        int oxmax = autre.getXmax();
+        int oymin = autre.getYmin();
+        int oymax = autre.getYmax();
+        int ozmin = autre.getZmin();
+        int ozmax = autre.getZmax();
+
+        boolean intersectX = ((first.getXmax() >= oxmin) && (oxmax >= first.getXmin()));
+        boolean intersectY = ((first.getYmax() >= oymin) && (oymax >= first.getYmin()));
+        boolean intersectZ = ((first.getZmax() >= ozmin) && (ozmax >= first.getZmin()));
+
+        return (intersectX && intersectY && intersectZ);
+    }
+    
+    protected List<Voxel3D> getVoxelInsideBoundingBox(int[] boundingBox, Object3D first) { //xmin, xmax, ymin, ymax, zmin, zmax
+        List<Voxel3D> list = first.getVoxels().stream().filter(voxel3D -> voxel3D.isInsideBoundingBox(boundingBox)).collect(Collectors.toList());
+
+        /*
+        LinkedList<Voxel3D> res = new LinkedList<Voxel3D>();
+        for (Voxel3D v : voxels) {
+            if (v.isInsideBoundingBox(boundingBox)) {
+                res.add(v);
+            }
+        }*/
+
+        return list;
+    }
+
+	
+    public int getColocVoxels(Object3D obj, Object3D first) {
+        if (first.disjointBox(obj)) {
+            return 0;
+        }
+    	
+    	
+        int[] intersec = this.getIntersectionBox(obj, first);
+        List<Voxel3D> al1 = this.getVoxelInsideBoundingBox(intersec, first);
+        if (!(obj instanceof Object3DVoxels)) {
+            obj = obj.getObject3DVoxels();
+        }
+        List<Voxel3D> al2 = getVoxelInsideBoundingBox(intersec, obj);
+
+        double count1 = al1.size();
+        double count2 = al2.size();
+        double total = count1*count2;
+        double currentCount = 0;
+        double percentage = 0.0;
+        
+        int cpt = 0;
+        for (Voxel3D v1 : al1) {
+            for (Voxel3D v2 : al2) {        		
+            	currentCount++;
+            	percentage = currentCount/(total);
+            	
+            	IJ.showProgress(percentage);
+            	
+            	if(this.debug_output && currentCount % 10000000 == 0)
+            	{
+            		System.out.println("Percentage done: " + percentage*100 + " " + currentCount + "/" + total );
+            	}
+                
+                
+                if (v1.sameVoxel(v2)) {
+                    cpt++;
+                }
+            }
+            
+        }
+        //System.out.println("Coloc:"+value +" voxelBB:"+al2.size()+ " coloc:"+cpt);
+        return cpt;
+    }
+	
+	/**************/
+	
+	
+	
+	
 
 	// The startLabel is primarily used for removing background (therefore
 	// startLabel = 1)

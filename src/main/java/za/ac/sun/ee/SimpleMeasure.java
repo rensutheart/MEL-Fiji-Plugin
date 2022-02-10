@@ -160,7 +160,7 @@ public class SimpleMeasure {
 		compactnessStats = getMeasuresCompactness();
 		elipsoidStats = getMeasuresEllipsoid();
 		distanceCentreContourStats = getMeasuresDistanceCentreContour();
-		feretStats = getMeasuresFeret();
+//		feretStats = getMeasuresFeret();
 
 		length = centroidStats.size();
 	}

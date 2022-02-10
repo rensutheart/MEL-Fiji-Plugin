@@ -36,7 +36,7 @@ for(f = 1; f <= (frames-1); f++)
 	run("MEL Process", "frame_1_title=Frame1 frame_2_title=Frame2  "+
 	"min_structure_volume="+(10*SF)+" min_overlap_percentage=0.5 skeleton_distance_threshold="+(20*SF)+" "+
 	"depolarisation_range_threshold="+(50*SF)+" depolarisation_structure_similarity_threshold=2.0"+
-	" remove_duplicates=true duplicate_range="+(10*SF)+" debug_output=false " +
+	" remove_duplicates=true duplicate_range="+(10*SF)+" debug_output=true " +
 	"save_event_location_and_stats=true path_to_event_csv="+outputPath+"EventLocations"+f+".csv " + 
 	"path_to_f1_stats_csv="+outputPath+"f1_stats"+f+".csv path_to_f2_stats_csv="+outputPath+"f2_stats"+f+".csv");
 	
