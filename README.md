@@ -10,7 +10,7 @@ This plugin relies on the [3D ImageJ Suite](https://imagejdocu.tudor.lu/plugin/s
 
 ## Usage
 
-This plugin is still under development, it should however be mostly functional even though the documentation is currently limited. We hope to improve the user friendliness of the system and have it entirely refined by the end of 2021.
+This plugin is still under development, it should however be mostly functional even though the documentation is currently limited. We hope to improve the user friendliness of the system and have it entirely refined by the end of 2022.
 
 Currently, the plugin can be run by selecting it under "Plugins>MEL Process" in the Fiji menu system.
 
