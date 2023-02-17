@@ -146,6 +146,8 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// ImagePlus imagePlus_Frame1 = WindowManager.getImage(title_Frame1);
 		// ImagePlus imagePlus_Frame2 = WindowManager.getImage(title_Frame2);
 
+		long timeBeforeMeasure = System.currentTimeMillis();
+
 		ImagePlus imagePlus_Frame1 = WindowManager.getImage(frame_1_title);
 		ImagePlus imagePlus_Frame2 = WindowManager.getImage(frame_2_title);
 
@@ -170,13 +172,19 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		ImageInt labels_F3 = null;
 		if (event_persistence)
 			labels_F3 = getLabeledImage(imagePlus_Frame3, min_structure_volume);
+		System.out.println("Labelling took " + (System.currentTimeMillis() - timeBeforeMeasure) + "ms");
 
 		// Create and calculate the measures (index 0 is label 1)
-		long timeBeforeMeasure = System.currentTimeMillis();
+		timeBeforeMeasure = System.currentTimeMillis();
 		System.out.println("Start SimpleMeasure for Label 1");
 		SimpleMeasure labels_F1_measure = new SimpleMeasure(labels_F1);
 		System.out.println("Start SimpleMeasure for Label 2");
 		SimpleMeasure labels_F2_measure = new SimpleMeasure(labels_F2);
+		SimpleMeasure labels_F3_measure = null;
+		if (event_persistence) {
+			System.out.println("Start SimpleMeasure for Label 3");
+			labels_F3_measure = new SimpleMeasure(labels_F3);
+		}
 		System.out.println("SimpleMeasure took " + (System.currentTimeMillis() - timeBeforeMeasure) + "ms");
 		/*
 		 * You can use the SimpleMeasure like this: Print table of all parameters:
@@ -193,13 +201,18 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// this 1 removes the background and only retains mitochondrial structures
 		Object3DVoxels[] labelVoxels_F1 = labelImageTo3DVoxelArray(labels_F1, 1);
 		Object3DVoxels[] labelVoxels_F2 = labelImageTo3DVoxelArray(labels_F2, 1);
+		Object3DVoxels[] labelVoxels_F3 = null;
+		if (event_persistence)
+			labelVoxels_F3 = labelImageTo3DVoxelArray(labels_F3, 1);
 
 		// Display results
 		labels_F1.show("Labels Frame1");
 		labels_F2.show("Labels Frame2");
+		labels_F3.show("Labels Frame3");
 
 		System.out.println("Number of Labels F1: " + labelVoxels_F1.length + " Labels Max: " + labels_F1.getMax());
 		System.out.println("Number of Labels F2: " + labelVoxels_F2.length + " Labels Max: " + labels_F2.getMax());
+		System.out.println("Number of Labels F3: " + labelVoxels_F3.length + " Labels Max: " + labels_F3.getMax());
 
 		/*
 		 * CALCULATE MEL PARAMTERS
@@ -207,11 +220,26 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// Get the overlapping volumes - IMPORTANT - None of these include the
 		// background, hence the index
 		// is off by 1 compared to the label image label number
-		int[][] overlappingVolumes = getOverlappingVolumes(labelVoxels_F1, labelVoxels_F2);
+		int[][] overlappingVolumes = getOverlappingVolumes(labelVoxels_F1, labelVoxels_F2); // the overlap between frame
+																							// 1 and 2
+		int[][] overlappingVolumes_1_3 = null;
+		if (event_persistence)
+			overlappingVolumes_1_3 = getOverlappingVolumes(labelVoxels_F1, labelVoxels_F3); // the overlap between frame
+																							// 1 and 3
 
+		// between frame 1 and 2
 		List<List<Integer>> associatedLabelsBetweenFrames_F1toF2 = getAssociatedLabelsBetweenFrames(overlappingVolumes);
 		List<List<Integer>> associatedLabelsBetweenFrames_F2toF1 = getAssociatedLabelsBetweenFrames(
 				transposeMatrix(overlappingVolumes));
+
+		// between frame 1 and 3
+		List<List<Integer>> associatedLabelsBetweenFrames_F1toF3 = null;
+		List<List<Integer>> associatedLabelsBetweenFrames_F3toF1 = null;
+		if (event_persistence) {
+			associatedLabelsBetweenFrames_F1toF3 = getAssociatedLabelsBetweenFrames(overlappingVolumes_1_3);
+			associatedLabelsBetweenFrames_F3toF1 = getAssociatedLabelsBetweenFrames(
+					transposeMatrix(overlappingVolumes_1_3));
+		}
 
 		List<List<Integer>> associatedLabelsBetweenFrames_F1toF2_withDep = addRoughDepolarisationMatch(
 				associatedLabelsBetweenFrames_F1toF2, associatedLabelsBetweenFrames_F2toF1, labels_F1_measure,
