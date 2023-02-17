@@ -79,6 +79,14 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 	@Parameter(label = "The window title of Frame 2", required = false)
 	private String frame_2_title = "";
 
+	// This one is only used if event persistence is used (meaning the event is
+	// still valid two frames down the line.
+	@Parameter(label = "The window title of Frame 3", required = false)
+	private String frame_3_title = "";
+
+	@Parameter(label = "Whether to exlude the event if it does not persist for 2 frames", required = false)
+	private boolean event_persistence = false;
+
 	@Parameter(label = "The minimum volume of the thresholded structures (voxels)", required = false)
 	private int min_structure_volume = 5; // TODO: This can be dependent on Voxel size (see Mitochondrial Analyzer
 											// macro)
@@ -141,9 +149,16 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		ImagePlus imagePlus_Frame1 = WindowManager.getImage(frame_1_title);
 		ImagePlus imagePlus_Frame2 = WindowManager.getImage(frame_2_title);
 
+		ImagePlus imagePlus_Frame3 = null;
+		if (event_persistence)
+			imagePlus_Frame3 = WindowManager.getImage(frame_3_title);
+
 		// convert from whatever bit depth and format to 8-bit for further processing
 		imagePlus_Frame1.setProcessor(imagePlus_Frame1.getProcessor().convertToByteProcessor());
 		imagePlus_Frame2.setProcessor(imagePlus_Frame2.getProcessor().convertToByteProcessor());
+
+		if (event_persistence)
+			imagePlus_Frame3.setProcessor(imagePlus_Frame3.getProcessor().convertToByteProcessor());
 
 		/*
 		 * LABEL MITOCHONDRIAL STRUCTURES
@@ -151,6 +166,10 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// Get the segmented labeled mitochondrial structures
 		ImageInt labels_F1 = getLabeledImage(imagePlus_Frame1, min_structure_volume);
 		ImageInt labels_F2 = getLabeledImage(imagePlus_Frame2, min_structure_volume);
+
+		ImageInt labels_F3 = null;
+		if (event_persistence)
+			labels_F3 = getLabeledImage(imagePlus_Frame3, min_structure_volume);
 
 		// Create and calculate the measures (index 0 is label 1)
 		long timeBeforeMeasure = System.currentTimeMillis();
@@ -338,9 +357,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			System.out.println("path_to_event_csv: " + path_to_event_csv);
 			saveAllEventLocations(path_to_event_csv, fusionEventLocations, fissionEventLocations,
 					depolarisationEventLocations);
-		}
-		else
-		{
+		} else {
 			System.out.println("You either set not to save the events or the path below does not end with .csv");
 			System.out.println(path_to_event_csv);
 		}
@@ -351,18 +368,15 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 			System.out.println("\nSAVING");
 			System.out.println("path_to_f1_stats_csv: " + path_to_f1_stats_csv);
 			saveMainLabelStats(path_to_f1_stats_csv, labels_F1_measure);
-			
+
 			// Save Frame 2 data
 			System.out.println("\nSAVING");
 			System.out.println("path_to_f2_stats_csv: " + path_to_f2_stats_csv);
 			saveMainLabelStats(path_to_f2_stats_csv, labels_F2_measure);
-		}
-		else
-		{
+		} else {
 			System.out.println("You either set not to save the stats or the path below does not end with .csv");
 			System.out.println(path_to_f1_stats_csv);
 		}
-
 
 		long endTime = System.currentTimeMillis();
 		System.out.println("MEL - Total execution time: " + (endTime - startTime) + "ms");
@@ -395,15 +409,15 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// a start label of 1
 		for (int label_F1 = 0; label_F1 < numLabels_F1; ++label_F1) {
 			for (int label_F2 = 0; label_F2 < numLabels_F2; ++label_F2) {
-				
-				
+
 				// This is the one from Object3DVoxels.class
-//				overlappingVolumes[label_F1][label_F2] = labelVoxels_F1[label_F1]
-//						.getColocVoxels(labelVoxels_F2[label_F2]);
-				
-				// The is my custom one for this function to allow for progress bar (the order does not matter of parameters)
-				overlappingVolumes[label_F1][label_F2] = getColocVoxels(labelVoxels_F2[label_F2], labelVoxels_F1[label_F1]);
-				
+				// overlappingVolumes[label_F1][label_F2] = labelVoxels_F1[label_F1]
+				// .getColocVoxels(labelVoxels_F2[label_F2]);
+
+				// The is my custom one for this function to allow for progress bar (the order
+				// does not matter of parameters)
+				overlappingVolumes[label_F1][label_F2] = getColocVoxels(labelVoxels_F2[label_F2],
+						labelVoxels_F1[label_F1]);
 
 				// This assumes a startLabel of 1
 				if (overlappingVolumes[label_F1][label_F2] != 0) {
@@ -419,111 +433,105 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 		return overlappingVolumes;
 	}
-	
-	
-	
+
 	/*****
-	 * This is a duplication of the code in the Object3DVoxels.class, but with some additional debugging code 
+	 * This is a duplication of the code in the Object3DVoxels.class, but with some
+	 * additional debugging code
 	 */
-	
-    protected int[] getIntersectionBox(Object3D other, Object3D first) {
-        int[] res = new int[6]; //xmin, xmax, ymin, ymax, zmin, zmax
-        res[0] = Math.max(first.getXmin(), other.getXmin());
-        res[1] = Math.min(first.getXmax(), other.getXmax());
-        res[2] = Math.max(first.getYmin(), other.getYmin());
-        res[3] = Math.min(first.getYmax(), other.getYmax());
-        res[4] = Math.max(first.getZmin(), other.getZmin());
-        res[5] = Math.min(first.getZmax(), other.getZmax());
-        return res;
-    }
 
-    private boolean computeOverlapBox(Object3D autre, Object3D first) {
-        int oxmin = autre.getXmin();
-        int oxmax = autre.getXmax();
-        int oymin = autre.getYmin();
-        int oymax = autre.getYmax();
-        int ozmin = autre.getZmin();
-        int ozmax = autre.getZmax();
+	protected int[] getIntersectionBox(Object3D other, Object3D first) {
+		int[] res = new int[6]; // xmin, xmax, ymin, ymax, zmin, zmax
+		res[0] = Math.max(first.getXmin(), other.getXmin());
+		res[1] = Math.min(first.getXmax(), other.getXmax());
+		res[2] = Math.max(first.getYmin(), other.getYmin());
+		res[3] = Math.min(first.getYmax(), other.getYmax());
+		res[4] = Math.max(first.getZmin(), other.getZmin());
+		res[5] = Math.min(first.getZmax(), other.getZmax());
+		return res;
+	}
 
-        boolean intersectX = ((first.getXmax() >= oxmin) && (oxmax >= first.getXmin()));
-        boolean intersectY = ((first.getYmax() >= oymin) && (oymax >= first.getYmin()));
-        boolean intersectZ = ((first.getZmax() >= ozmin) && (ozmax >= first.getZmin()));
+	private boolean computeOverlapBox(Object3D autre, Object3D first) {
+		int oxmin = autre.getXmin();
+		int oxmax = autre.getXmax();
+		int oymin = autre.getYmin();
+		int oymax = autre.getYmax();
+		int ozmin = autre.getZmin();
+		int ozmax = autre.getZmax();
 
-        return (intersectX && intersectY && intersectZ);
-    }
-    
-    protected List<Voxel3D> getVoxelInsideBoundingBox(int[] boundingBox, Object3D first) { //xmin, xmax, ymin, ymax, zmin, zmax
-        List<Voxel3D> list = first.getVoxels().stream().filter(voxel3D -> voxel3D.isInsideBoundingBox(boundingBox)).collect(Collectors.toList());
+		boolean intersectX = ((first.getXmax() >= oxmin) && (oxmax >= first.getXmin()));
+		boolean intersectY = ((first.getYmax() >= oymin) && (oymax >= first.getYmin()));
+		boolean intersectZ = ((first.getZmax() >= ozmin) && (ozmax >= first.getZmin()));
 
-        /*
-        LinkedList<Voxel3D> res = new LinkedList<Voxel3D>();
-        for (Voxel3D v : voxels) {
-            if (v.isInsideBoundingBox(boundingBox)) {
-                res.add(v);
-            }
-        }*/
+		return (intersectX && intersectY && intersectZ);
+	}
 
-        return list;
-    }
+	protected List<Voxel3D> getVoxelInsideBoundingBox(int[] boundingBox, Object3D first) { // xmin, xmax, ymin, ymax,
+																							// zmin, zmax
+		List<Voxel3D> list = first.getVoxels().stream().filter(voxel3D -> voxel3D.isInsideBoundingBox(boundingBox))
+				.collect(Collectors.toList());
 
-	
-    public int getColocVoxels(Object3D obj, Object3D first) {
-        if (first.disjointBox(obj)) {
-            return 0;
-        }
-    	
-    	
-        int[] intersec = this.getIntersectionBox(obj, first);
-        List<Voxel3D> al1 = this.getVoxelInsideBoundingBox(intersec, first);
-        if (!(obj instanceof Object3DVoxels)) {
-            obj = obj.getObject3DVoxels();
-        }
-        List<Voxel3D> al2 = getVoxelInsideBoundingBox(intersec, obj);
+		/*
+		 * LinkedList<Voxel3D> res = new LinkedList<Voxel3D>();
+		 * for (Voxel3D v : voxels) {
+		 * if (v.isInsideBoundingBox(boundingBox)) {
+		 * res.add(v);
+		 * }
+		 * }
+		 */
 
+		return list;
+	}
 
-        double count1 = al1.size();
-        double count2 = al2.size();
-        double total = count1*count2;
-        double currentCount = 0;
-        double percentage = 0.0;
-        
-        
-        int cpt = 0;
-        for (Voxel3D v1 : al1) {
-            List<Voxel3D> removeList = new ArrayList<Voxel3D>();
-            for (Voxel3D v2 : al2) {  
-            	// This is only to calculate the progress bar
-            	currentCount++;
-            	percentage = currentCount/(total);
-            	
-            	IJ.showProgress(percentage);
-            	
-            	if(this.debug_output && currentCount % 10000000 == 0)
-            	{
-            		System.out.println("Percentage done: " + percentage*100 + " " + currentCount + "/" + total );
-            	}
-                
-                // Note this will not count duplicates, since it is asked relative to v1
-                if (v1.sameVoxel(v2)) {
-                    cpt++;
-                    
-                    // make the list smaller for future processing, and since clearly that voxel will not be able to overlap again
-                    removeList.add(v2);
-                }
-            }
-            
-            al2.removeAll(removeList);            
-        }
+	public int getColocVoxels(Object3D obj, Object3D first) {
+		if (first.disjointBox(obj)) {
+			return 0;
+		}
 
-        //System.out.println("Coloc:"+value +" voxelBB:"+al2.size()+ " coloc:"+cpt);
-        return cpt;
-    }
-	
+		int[] intersec = this.getIntersectionBox(obj, first);
+		List<Voxel3D> al1 = this.getVoxelInsideBoundingBox(intersec, first);
+		if (!(obj instanceof Object3DVoxels)) {
+			obj = obj.getObject3DVoxels();
+		}
+		List<Voxel3D> al2 = getVoxelInsideBoundingBox(intersec, obj);
+
+		double count1 = al1.size();
+		double count2 = al2.size();
+		double total = count1 * count2;
+		double currentCount = 0;
+		double percentage = 0.0;
+
+		int cpt = 0;
+		for (Voxel3D v1 : al1) {
+			List<Voxel3D> removeList = new ArrayList<Voxel3D>();
+			for (Voxel3D v2 : al2) {
+				// This is only to calculate the progress bar
+				currentCount++;
+				percentage = currentCount / (total);
+
+				IJ.showProgress(percentage);
+
+				if (this.debug_output && currentCount % 10000000 == 0) {
+					System.out.println("Percentage done: " + percentage * 100 + " " + currentCount + "/" + total);
+				}
+
+				// Note this will not count duplicates, since it is asked relative to v1
+				if (v1.sameVoxel(v2)) {
+					cpt++;
+
+					// make the list smaller for future processing, and since clearly that voxel
+					// will not be able to overlap again
+					removeList.add(v2);
+				}
+			}
+
+			al2.removeAll(removeList);
+		}
+
+		// System.out.println("Coloc:"+value +" voxelBB:"+al2.size()+ " coloc:"+cpt);
+		return cpt;
+	}
+
 	/**************/
-	
-	
-	
-	
 
 	// The startLabel is primarily used for removing background (therefore
 	// startLabel = 1)
@@ -1054,15 +1062,15 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		public String toString() {
 			String typeText = "";
 			switch (this.eventType) {
-			case 0: // fusion
-				typeText = "Fusion";
-				break;
-			case 1: // fission
-				typeText = "Fission";
-				break;
-			case 2: // depolarisation
-				typeText = "Depolarisation";
-				break;
+				case 0: // fusion
+					typeText = "Fusion";
+					break;
+				case 1: // fission
+					typeText = "Fission";
+					break;
+				case 2: // depolarisation
+					typeText = "Depolarisation";
+					break;
 			}
 			// +1 since background not included
 			return "Event Location: " + this.location + " First Label: " + (this.firstLabel + 1) + " Second Label: "
