@@ -160,7 +160,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		SimpleMeasure labels_F2_measure = new SimpleMeasure(labels_F2);
 		System.out.println("SimpleMeasure took " + (System.currentTimeMillis() - timeBeforeMeasure) + "ms");
 		/*
-		 * Use can use the SimpleMeasure like this: Print table of all parameters:
+		 * You can use the SimpleMeasure like this: Print table of all parameters:
 		 * 
 		 * labels_F1_measure.printStats(labels_F1_measure.compactnessStats);
 		 * 
@@ -401,7 +401,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 //				overlappingVolumes[label_F1][label_F2] = labelVoxels_F1[label_F1]
 //						.getColocVoxels(labelVoxels_F2[label_F2]);
 				
-				// The is my custom one for this class
+				// The is my custom one for this function to allow for progress bar (the order does not matter of parameters)
 				overlappingVolumes[label_F1][label_F2] = getColocVoxels(labelVoxels_F2[label_F2], labelVoxels_F1[label_F1]);
 				
 
@@ -480,15 +480,19 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
         }
         List<Voxel3D> al2 = getVoxelInsideBoundingBox(intersec, obj);
 
+
         double count1 = al1.size();
         double count2 = al2.size();
         double total = count1*count2;
         double currentCount = 0;
         double percentage = 0.0;
         
+        
         int cpt = 0;
         for (Voxel3D v1 : al1) {
-            for (Voxel3D v2 : al2) {        		
+            List<Voxel3D> removeList = new ArrayList<Voxel3D>();
+            for (Voxel3D v2 : al2) {  
+            	// This is only to calculate the progress bar
             	currentCount++;
             	percentage = currentCount/(total);
             	
@@ -499,13 +503,18 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
             		System.out.println("Percentage done: " + percentage*100 + " " + currentCount + "/" + total );
             	}
                 
-                
+                // Note this will not count duplicates, since it is asked relative to v1
                 if (v1.sameVoxel(v2)) {
                     cpt++;
+                    
+                    // make the list smaller for future processing, and since clearly that voxel will not be able to overlap again
+                    removeList.add(v2);
                 }
             }
             
+            al2.removeAll(removeList);            
         }
+
         //System.out.println("Coloc:"+value +" voxelBB:"+al2.size()+ " coloc:"+cpt);
         return cpt;
     }

@@ -1,4 +1,5 @@
-outputPath = "C:/RESEARCH/MEL/MEL_Output/"
+//outputPath = "C:/RESEARCH/MEL/MEL_Output/"
+outputPath = "/Volumes/Extreme SSD/RESEARCH/Vanderbilt Samples/MEL_test/Output/"
 
 var singleImage = true;
 var stack = true;
@@ -11,7 +12,8 @@ close("*");
 //open("C:/Users/rptheart/Dropbox/Research/MitoMorph/MEL2/Temp/Test/Frame2_Thresholded" + extenstion);
 //rename("Frame2");
 
-open("C:/RESEARCH/MEL/Thresholded/Con001_otsu.tif");
+//open("C:/RESEARCH/MEL/Thresholded/Con001_otsu.tif");
+open("/Volumes/Extreme SSD/RESEARCH/Vanderbilt Samples/MEL_test/Thresholded/ThresholdedTimelapse.tif")
 rename("Timelapse");
 getDimensions(width, height, channels, slices, frames);
 if(channels > 1)
@@ -21,9 +23,9 @@ print(frames + " frames detected");
 print(slices + " slices detected");
 
 if(singleImage)
-frames = 2;
+frames = 3;
 
-for(f = 1; f <= (frames-1); f++)
+for(f = 2; f <= (frames-1); f++)
 {	
 	// extract fames from timelapse
 	run("Make Substack...", "slices=1-" + slices +" frames=" + f);
