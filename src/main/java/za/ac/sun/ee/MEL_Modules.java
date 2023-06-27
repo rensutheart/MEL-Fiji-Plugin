@@ -361,13 +361,26 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 					reducedAssociatedLabelsBetweenFrames_F1toF3, skeleton_distance_threshold);
 		}
 
-		List<EventNode> fusionEventLocations = null;
+		List<EventNode> fusionEventLocations = new ArrayList<EventNode>();
 		if (!event_persistence) {
 			// Find all the events F1 to F2 (fusion)
 			fusionEventLocations = findEvents(matchedGraphs_onF2, labelsSkeletonGraphs_F1, remove_duplicates,
 					duplicate_range, 0);
 		} else {
-			// TODO COMPLETE THIS
+			List<EventNode> fusionEventLocations_1_2 = findEvents(matchedGraphs_onF2, labelsSkeletonGraphs_F1,
+					remove_duplicates, duplicate_range, 0);
+			List<EventNode> fusionEventLocations_1_3 = findEvents(matchedGraphs_onF3, labelsSkeletonGraphs_F1,
+					remove_duplicates, duplicate_range, 0);
+
+			// For it to be considered "persistent" it must be within the range of another
+			// valid event
+			for (EventNode eventLocA : fusionEventLocations_1_2) {
+				for (EventNode eventLocB : fusionEventLocations_1_3) {
+					if (eventLocA.distance(eventLocB) <= duplicate_range) {
+						fusionEventLocations.add(eventLocA);
+					}
+				}
+			}
 		}
 		ImageInt fusionEventsImage = eventsToImage(fusionEventLocations, labels_F1.sizeX, labels_F1.sizeY,
 				labels_F1.sizeZ, "Fusion events");
@@ -385,12 +398,25 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// labels_F1.sizeZ, false, "Unmatched graph");
 
 		// Find all the events F2 to F1 (fission)
-		List<EventNode> fissionEventLocations = null;
+		List<EventNode> fissionEventLocations = new ArrayList<EventNode>();
 		if (!event_persistence) {
 			fissionEventLocations = findEvents(matchedGraphs_onF1, labelsSkeletonGraphs_F2, remove_duplicates,
 					duplicate_range, 1);
 		} else {
-			// TODO COMPLETE THIS
+			List<EventNode> fissionEventLocations_1_2 = findEvents(matchedGraphs_onF1, labelsSkeletonGraphs_F2,
+					remove_duplicates, duplicate_range, 1);
+			List<EventNode> fissionEventLocations_1_3 = findEvents(matchedGraphs_onF1, labelsSkeletonGraphs_F3,
+					remove_duplicates, duplicate_range, 1);
+
+			// For it to be considered "persistent" it must be within the range of another
+			// valid event
+			for (EventNode eventLocA : fissionEventLocations_1_2) {
+				for (EventNode eventLocB : fissionEventLocations_1_3) {
+					if (eventLocA.distance(eventLocB) <= duplicate_range) {
+						fissionEventLocations.add(eventLocA);
+					}
+				}
+			}
 		}
 		ImageInt fissionEventsImage = eventsToImage(fissionEventLocations, labels_F1.sizeX, labels_F1.sizeY,
 				labels_F1.sizeZ, "Fission events");
@@ -403,12 +429,26 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// here, since for depolarisation I would err on the side of caution, and if
 		// there is a slight possibility that the even did join to another structure or
 		// moved, then I don't want to mark it
-		List<EventNode> depolarisationEventLocations = null;
+		List<EventNode> depolarisationEventLocations = new ArrayList<EventNode>();
+		;
 		if (!event_persistence) {
 			depolarisationEventLocations = findDepolarisationEvents(associatedLabelsBetweenFrames_F1toF2_withDep,
 					labelVoxels_F1);
 		} else {
-			// TODO COMPLETE THIS
+			List<EventNode> depolarisationEventLocations_1_2 = findDepolarisationEvents(
+					associatedLabelsBetweenFrames_F1toF2_withDep, labelVoxels_F1);
+			List<EventNode> depolarisationEventLocations_1_3 = findDepolarisationEvents(
+					associatedLabelsBetweenFrames_F1toF3_withDep, labelVoxels_F1);
+
+			// For it to be considered "persistent" it must be within the range of another
+			// valid event
+			for (EventNode eventLocA : depolarisationEventLocations_1_2) {
+				for (EventNode eventLocB : depolarisationEventLocations_1_3) {
+					if (eventLocA.distance(eventLocB) <= duplicate_range) {
+						depolarisationEventLocations.add(eventLocA);
+					}
+				}
+			}
 		}
 		ImageInt depolarisationEventsImage = eventsToImage(depolarisationEventLocations, labels_F1.sizeX,
 				labels_F1.sizeY, labels_F1.sizeZ, "Depolarisation events");
