@@ -129,7 +129,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 	@Override
 	public void run() {
-		System.out.println("MEL V0.8.1");
+		System.out.println("MEL V0.9.0");
 		long startTime = System.currentTimeMillis();
 		// I'm assuming the input images are Pre-processed and thresholded.
 
