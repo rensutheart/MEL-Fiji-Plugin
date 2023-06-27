@@ -86,6 +86,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 	@Parameter(label = "Whether to exlude the event if it does not persist for 2 frames", required = false)
 	private boolean event_persistence = false;
+	
 
 	@Parameter(label = "The minimum volume of the thresholded structures (voxels)", required = false)
 	private int min_structure_volume = 5; // TODO: This can be dependent on Voxel size (see Mitochondrial Analyzer
@@ -220,7 +221,7 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// Get the overlapping volumes - IMPORTANT - None of these include the
 		// background, hence the index
 		// is off by 1 compared to the label image label number
-		int[][] overlappingVolumes = getOverlappingVolumes(labelVoxels_F1, labelVoxels_F2); // the overlap between frame
+		int[][] overlappingVolumes_1_2 = getOverlappingVolumes(labelVoxels_F1, labelVoxels_F2); // the overlap between frame
 																							// 1 and 2
 		int[][] overlappingVolumes_1_3 = null;
 		if (event_persistence)
@@ -228,9 +229,9 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 																							// 1 and 3
 
 		// between frame 1 and 2
-		List<List<Integer>> associatedLabelsBetweenFrames_F1toF2 = getAssociatedLabelsBetweenFrames(overlappingVolumes);
+		List<List<Integer>> associatedLabelsBetweenFrames_F1toF2 = getAssociatedLabelsBetweenFrames(overlappingVolumes_1_2);
 		List<List<Integer>> associatedLabelsBetweenFrames_F2toF1 = getAssociatedLabelsBetweenFrames(
-				transposeMatrix(overlappingVolumes));
+				transposeMatrix(overlappingVolumes_1_2));
 
 		// between frame 1 and 3
 		List<List<Integer>> associatedLabelsBetweenFrames_F1toF3 = null;
@@ -244,6 +245,12 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		List<List<Integer>> associatedLabelsBetweenFrames_F1toF2_withDep = addRoughDepolarisationMatch(
 				associatedLabelsBetweenFrames_F1toF2, associatedLabelsBetweenFrames_F2toF1, labels_F1_measure,
 				labels_F2_measure, depolarisation_range_threshold, depolarisation_structure_similarity_threshold);
+		List<List<Integer>> associatedLabelsBetweenFrames_F1toF3_withDep = null;
+		if (event_persistence) {
+			associatedLabelsBetweenFrames_F1toF3_withDep = addRoughDepolarisationMatch(
+					associatedLabelsBetweenFrames_F1toF3, associatedLabelsBetweenFrames_F3toF1, labels_F1_measure,
+					labels_F3_measure, depolarisation_range_threshold, depolarisation_structure_similarity_threshold);
+		}
 
 		// I don't seem to need this anymore for the new approach
 		// List<List<Integer>> associatedLabelsWithinFrame_F1 =
@@ -253,15 +260,31 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// getAssociatedLabelsWithinFrame(associatedLabelsBetweenFrames_F2toF1,
 		// associatedLabelsBetweenFrames_F1toF2);
 
-		List<List<Float>> percentageOverlap_F1toF2 = getRelativePercentageOverlap(overlappingVolumes,
+		List<List<Float>> percentageOverlap_F1toF2 = getRelativePercentageOverlap(overlappingVolumes_1_2,
 				associatedLabelsBetweenFrames_F1toF2);
-		List<List<Float>> percentageOverlap_F2toF1 = getRelativePercentageOverlap(transposeMatrix(overlappingVolumes),
+		List<List<Float>> percentageOverlap_F2toF1 = getRelativePercentageOverlap(transposeMatrix(overlappingVolumes_1_2),
 				associatedLabelsBetweenFrames_F2toF1);
 
 		List<List<Integer>> reducedAssociatedLabelsBetweenFrames_F1toF2 = reduceAssociateLabels(
 				associatedLabelsBetweenFrames_F1toF2, percentageOverlap_F1toF2, min_overlap_percentage);
 		List<List<Integer>> reducedAssociatedLabelsBetweenFrames_F2toF1 = reduceAssociateLabels(
 				associatedLabelsBetweenFrames_F2toF1, percentageOverlap_F2toF1, min_overlap_percentage);
+			
+		List<List<Float>> percentageOverlap_F1toF3 = null;
+		List<List<Float>> percentageOverlap_F3toF1 = null;
+		List<List<Integer>> reducedAssociatedLabelsBetweenFrames_F1toF3 = null;
+		List<List<Integer>> reducedAssociatedLabelsBetweenFrames_F3toF1 = null;
+		if (event_persistence) {
+			percentageOverlap_F1toF3 = getRelativePercentageOverlap(overlappingVolumes_1_3,
+					associatedLabelsBetweenFrames_F1toF3);
+			percentageOverlap_F3toF1 = getRelativePercentageOverlap(transposeMatrix(overlappingVolumes_1_3),
+					associatedLabelsBetweenFrames_F3toF1);
+
+			reducedAssociatedLabelsBetweenFrames_F1toF3 = reduceAssociateLabels(
+					associatedLabelsBetweenFrames_F1toF3, percentageOverlap_F1toF3, min_overlap_percentage);
+			reducedAssociatedLabelsBetweenFrames_F3toF1 = reduceAssociateLabels(
+					associatedLabelsBetweenFrames_F3toF1, percentageOverlap_F3toF1, min_overlap_percentage);
+		}
 
 		// Display Results
 		if (debug_output)
@@ -300,6 +323,14 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 
 		List<Graph<Vector3D, DefaultEdge>> labelsSkeletonGraphs_F1 = allSkeletonsToGraphs(labelsSkeletons_F1);
 		List<Graph<Vector3D, DefaultEdge>> labelsSkeletonGraphs_F2 = allSkeletonsToGraphs(labelsSkeletons_F2);
+		
+		List<Object3DVoxels> labelsSkeletons_F3 = null;
+		List<Graph<Vector3D, DefaultEdge>> labelsSkeletonGraphs_F3 = null;
+		if (event_persistence) {
+			labelsSkeletons_F3 = labelsToSkeleton(labels_F3, "Labeled Skeleton F2");
+
+			labelsSkeletonGraphs_F3 = allSkeletonsToGraphs(labelsSkeletons_F3);
+		}
 
 		// Display Results
 		if (debug_output)
@@ -323,13 +354,24 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 				"Matched graph Fusion");
 		// showGraphNodesAsImage(matchedGraphs_onF2, labels_F1.sizeX, labels_F1.sizeY,
 		// labels_F1.sizeZ, false, "Unmatched graph");
+		Graph<GraphNode, DefaultEdge> matchedGraphs_onF3 = null;
+		if (event_persistence) {
+			matchedGraphs_onF3 = matchGraphNodesBetweenFrames(labelsSkeletonGraphs_F1,
+					labelsSkeletonGraphs_F3, reducedAssociatedLabelsBetweenFrames_F1toF3, skeleton_distance_threshold);
+		}
 
+		List<EventNode> fusionEventLocations = null;
+		if (!event_persistence) {
 		// Find all the events F1 to F2 (fusion)
-		List<EventNode> fusionEventLocations = findEvents(matchedGraphs_onF2, labelsSkeletonGraphs_F1,
+		 fusionEventLocations = findEvents(matchedGraphs_onF2, labelsSkeletonGraphs_F1,
 				remove_duplicates, duplicate_range, 0);
+		}
+		else {
+			// TODO COMPLETE THIS
+		}
 		ImageInt fusionEventsImage = eventsToImage(fusionEventLocations, labels_F1.sizeX, labels_F1.sizeY,
 				labels_F1.sizeZ, "Fusion events");
-
+		
 		/*
 		 * DETECT FISSION
 		 */
@@ -343,11 +385,18 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// labels_F1.sizeZ, false, "Unmatched graph");
 
 		// Find all the events F2 to F1 (fission)
-		List<EventNode> fissionEventLocations = findEvents(matchedGraphs_onF1, labelsSkeletonGraphs_F2,
+		List<EventNode> fissionEventLocations = null;
+		if (!event_persistence) {
+		fissionEventLocations = findEvents(matchedGraphs_onF1, labelsSkeletonGraphs_F2,
 				remove_duplicates, duplicate_range, 1);
+		}
+		else {
+			// TODO COMPLETE THIS
+		}
 		ImageInt fissionEventsImage = eventsToImage(fissionEventLocations, labels_F1.sizeX, labels_F1.sizeY,
 				labels_F1.sizeZ, "Fission events");
-
+		
+		
 		/*
 		 * DETECT DEPOLARISATION
 		 */
@@ -356,8 +405,13 @@ public class MEL_Modules<T extends RealType<T>> implements Command {
 		// here, since for depolarisation I would err on the side of caution, and if
 		// there is a slight possibility that the even did join to another structure or
 		// moved, then I don't want to mark it
-		List<EventNode> depolarisationEventLocations = findDepolarisationEvents(
-				associatedLabelsBetweenFrames_F1toF2_withDep, labelVoxels_F1);
+		List<EventNode> depolarisationEventLocations = null;
+		if (!event_persistence) {
+				depolarisationEventLocations = findDepolarisationEvents(associatedLabelsBetweenFrames_F1toF2_withDep, labelVoxels_F1);
+		}
+		else {
+			// TODO COMPLETE THIS
+		}
 		ImageInt depolarisationEventsImage = eventsToImage(depolarisationEventLocations, labels_F1.sizeX,
 				labels_F1.sizeY, labels_F1.sizeZ, "Depolarisation events");
 

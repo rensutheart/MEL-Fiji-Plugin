@@ -1,24 +1,32 @@
 inputPathToTimelapse = "C:/RESEARCH/Sholto_Conf/4.Thresholded/100-10/LME.tif";
 outputPath = "C:/RESEARCH/Sholto_Conf/5.MEL_Output/100-10/";
 
+inputPathToTimelapse = "/Volumes/Extreme SSD/RESEARCH/2023/Peroxisomes/4 - Thresh/G32A_FBs_Perox_CellLite_GFP _100x_005.tif"
+outputPath = "/Volumes/Extreme SSD/RESEARCH/2023/Peroxisomes/5 - MEL/"
+
 if(!File.exists(outputPath))
 	File.makeDirectory(outputPath);
 
-SF = 3;
+SF = 1;
+min_structure_volume = 5;
 
 var stack = true;
 run("Console");
 
+close("*");
 open(inputPathToTimelapse);
 rename("Timelapse");
 getDimensions(width, height, channels, slices, frames);
-if(channels > 1)
+if(channels > 1){
 	print("MEL only works with single channel images that were thresholded");
+	return 0;
+}
 	
 print(frames + " frames detected");
 print(slices + " slices detected");
 
 //f = 1;
+// Note Fiji starts counting at 1
 for(f = 1; f <= (frames-1); f++)
 {		
 	fText = "" + f + ".tif";
@@ -33,10 +41,11 @@ for(f = 1; f <= (frames-1); f++)
 	run("Make Substack...", "slices=1-" + slices +"  frames=" + (f+1));
 	rename("Frame2");
 	
+	
 	run("MEL Process", "frame_1_title=Frame1 frame_2_title=Frame2  "+
-	"min_structure_volume="+(10*SF)+" min_overlap_percentage=0.5 skeleton_distance_threshold="+(20*SF)+" "+
+	"min_structure_volume="+(min_structure_volume*SF)+" min_overlap_percentage=0.5 skeleton_distance_threshold="+(20*SF)+" "+
 	"depolarisation_range_threshold="+(50*SF)+" depolarisation_structure_similarity_threshold=2.0"+
-	" remove_duplicates=true duplicate_range="+(10*SF)+" debug_output=true " +
+	" remove_duplicates=true duplicate_range="+(10*SF)+" debug_output=false " +
 	"save_event_location_and_stats=true path_to_event_csv="+outputPath+"EventLocations"+f+".csv " + 
 	"path_to_f1_stats_csv="+outputPath+"f1_stats"+f+".csv path_to_f2_stats_csv="+outputPath+"f2_stats"+f+".csv");
 	
@@ -53,17 +62,17 @@ for(f = 1; f <= (frames-1); f++)
 	//selectWindow("Matched graph");
 	//run("mpl-viridis");
 	
-	selectWindow("Labeled Skeleton F1 - small structures might be missing");
-	run("mpl-viridis");
+//	selectWindow("Labeled Skeleton F1 - small structures might be missing");
+//	run("mpl-viridis");
+//	
+//	selectWindow("Labeled Skeleton F2 - small structures might be missing");
+//	run("mpl-viridis");
 	
-	selectWindow("Labeled Skeleton F2 - small structures might be missing");
-	run("mpl-viridis");
-	
-	selectWindow("Matched graph Fusion");
-	run("mpl-viridis");
-	
-	selectWindow("Matched graph Fission");
-	run("mpl-viridis");
+//	selectWindow("Matched graph Fusion");
+//	run("mpl-viridis");
+//	
+//	selectWindow("Matched graph Fission");
+//	run("mpl-viridis");
 	
 	
 	selectWindow("Fusion events");
